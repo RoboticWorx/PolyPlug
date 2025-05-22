@@ -3,20 +3,13 @@
 
 idf_component_register(
     SRCS main.c         # list the source files of this component
-        "${CMAKE_SOURCE_DIR}/drivers/sx126x/lr_fhss_mac.c"
-        "${CMAKE_SOURCE_DIR}/drivers/sx126x/sx126x_driver_version.c"
-        "${CMAKE_SOURCE_DIR}/drivers/sx126x/sx126x_hal.c"
-        "${CMAKE_SOURCE_DIR}/drivers/sx126x/sx126x_lr_fhss.c"
-        "${CMAKE_SOURCE_DIR}/drivers/sx126x/sx126x.c"
-        
-        "${CMAKE_SOURCE_DIR}/components/lora/src/lora_task.c"
-        "${CMAKE_SOURCE_DIR}/components/lora/src/lora_funcs.c"
-        "${CMAKE_SOURCE_DIR}/components/lora/src/aes.c"
-    INCLUDE_DIRS        # optional, add here public include directories
-        "${CMAKE_SOURCE_DIR}/drivers/sx126x"
-    	"${CMAKE_SOURCE_DIR}/components/lora/include"
+
+    INCLUDE_DIRS "."       # optional, add here public include directories
+
     PRIV_INCLUDE_DIRS   # optional, add here private include directories
+    
     REQUIRES            # optional, list the public requirements (component names)
-    	driver freertos nvs_flash
+    	lora sx126x espnow
+    	driver freertos nvs_flash esp_netif esp_wifi
     PRIV_REQUIRES       # optional, list the private requirements
 )

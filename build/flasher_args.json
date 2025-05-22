@@ -18,7 +18,7 @@
     "extra_esptool_args" : {
         "after"  : "hard_reset",
         "before" : "default_reset",
-        "stub"   : false,
+        "stub"   : true,
         "chip"   : "esp32c5"
     }
 }

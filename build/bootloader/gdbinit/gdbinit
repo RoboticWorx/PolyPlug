@@ -1,2 +1,2 @@
-source C:/ESP_L/PolyPlug/build/bootloader/gdbinit/symbols
-source C:/ESP_L/PolyPlug/build/bootloader/gdbinit/connect
+source C:/ESPL/PolyPlug/build/bootloader/gdbinit/symbols
+source C:/ESPL/PolyPlug/build/bootloader/gdbinit/connect

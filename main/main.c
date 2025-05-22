@@ -7,12 +7,19 @@
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 
-#include "esp_log.h"
+#include "nvs.h"
+#include "nvs_flash.h"
 
-#include "hal/gpio_types.h"
+#include "esp_log.h"
+#include "esp_err.h"
+
 #include "lora_task.h"
+
 #include "sx126x.h"
 #include "sx126x_hal.h"
+
+#include "espnow_funcs.h"
+#include "espnow_task.h"
 
 // Logging tag
 static const char *TAG = "MAIN";
@@ -59,6 +66,23 @@ static void spi_shared_init(void) {
 
 void app_main(void) {
 	
+	esp_err_t ret = nvs_flash_init();
+    
+    // Error check
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_LOGW(TAG, "Erasing NVS partition...");
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    
+    ESP_ERROR_CHECK(ret);
+    ESP_LOGI(TAG, "NVS initialized");
+	
+	// Allocate Wi-Fi buffers now without fragmentation
+    ESP_ERROR_CHECK(esp_funcs_wifi_driver_init());
+    // Turn off radio to save power
+    ESP_ERROR_CHECK(esp_funcs_wifi_radio_stop());
+	
 	// Initialize SPI
 	spi_shared_init();
 	//gpio_init();
@@ -74,7 +98,8 @@ void app_main(void) {
 	sx126x.hal_read = sx126x_hal_read;
 
 	// Create tasks
-	lora_task_create();
+	//lora_task_create();
+	espnow_task_create();
 
 	ESP_LOGI(TAG, "Main initialized and tasks created");
 	

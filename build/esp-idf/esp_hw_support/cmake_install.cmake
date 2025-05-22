@@ -1,4 +1,4 @@
-# Install script for directory: C:/Espressif/frameworks/esp-idf-master/components/esp_hw_support
+# Install script for directory: C:/Espressif/frameworks/esp-idf-v5.4/components/esp_hw_support
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -39,11 +39,11 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("C:/ESP_L/PolyPlug/build/esp-idf/esp_hw_support/port/esp32c5/cmake_install.cmake")
+  include("C:/ESPL/PolyPlug/build/esp-idf/esp_hw_support/port/esp32c5/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("C:/ESP_L/PolyPlug/build/esp-idf/esp_hw_support/lowpower/cmake_install.cmake")
+  include("C:/ESPL/PolyPlug/build/esp-idf/esp_hw_support/lowpower/cmake_install.cmake")
 endif()
 

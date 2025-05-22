@@ -6,22 +6,22 @@ cmake_minimum_required(VERSION 3.5)
 # If CMAKE_DISABLE_SOURCE_CHANGES is set to true and the source directory is an
 # existing directory in our source tree, calling file(MAKE_DIRECTORY) on it
 # would cause a fatal error, even though it would be a no-op.
-if(NOT EXISTS "C:/Espressif/frameworks/esp-idf-master/components/bootloader/subproject")
-  file(MAKE_DIRECTORY "C:/Espressif/frameworks/esp-idf-master/components/bootloader/subproject")
+if(NOT EXISTS "C:/Espressif/frameworks/esp-idf-v5.4/components/bootloader/subproject")
+  file(MAKE_DIRECTORY "C:/Espressif/frameworks/esp-idf-v5.4/components/bootloader/subproject")
 endif()
 file(MAKE_DIRECTORY
-  "C:/ESP_L/PolyPlug/build/bootloader"
-  "C:/ESP_L/PolyPlug/build/bootloader-prefix"
-  "C:/ESP_L/PolyPlug/build/bootloader-prefix/tmp"
-  "C:/ESP_L/PolyPlug/build/bootloader-prefix/src/bootloader-stamp"
-  "C:/ESP_L/PolyPlug/build/bootloader-prefix/src"
-  "C:/ESP_L/PolyPlug/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/ESPL/PolyPlug/build/bootloader"
+  "C:/ESPL/PolyPlug/build/bootloader-prefix"
+  "C:/ESPL/PolyPlug/build/bootloader-prefix/tmp"
+  "C:/ESPL/PolyPlug/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/ESPL/PolyPlug/build/bootloader-prefix/src"
+  "C:/ESPL/PolyPlug/build/bootloader-prefix/src/bootloader-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "C:/ESP_L/PolyPlug/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
+    file(MAKE_DIRECTORY "C:/ESPL/PolyPlug/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "C:/ESP_L/PolyPlug/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "C:/ESPL/PolyPlug/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
 endif()
