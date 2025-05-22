@@ -11,19 +11,24 @@
 
 #define TAG "ESPNOW_TASK"
 
+#define ENC_KEY_LEN 16
+static uint8_t received_enc_key[ENC_KEY_LEN] = {0};
+
 //static const uint8_t UNIVERSAL_MAC[ESP_NOW_ETH_ALEN] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
 static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, int data_len) {
-    char buf[251];
-    int len = data_len < sizeof(buf) ? data_len : (sizeof(buf)-1);
-    memcpy(buf, data, len);
-    buf[len] = '\0';
+    // Only take up to ENC_KEY_LEN bytes
+    int copy_len = data_len < ENC_KEY_LEN ? data_len : ENC_KEY_LEN;
 
-    const uint8_t *mac = info->src_addr;
-    ESP_LOGI("ESPNOW_RX",
-             "From %02X:%02X:%02X:%02X:%02X:%02X   \"%s\"",
-             mac[0],mac[1],mac[2],mac[3],mac[4],mac[5],
-             buf);
+    // Zero out the rest of the key (optional)
+    memset(received_enc_key, 0, ENC_KEY_LEN);
+
+    // Copy received bytes into your key array
+    memcpy(received_enc_key, data, copy_len);
+
+    // Now print the stored key in hex
+    ESP_LOGI("ESPNOW_RX", "Stored key (%d bytes):", copy_len);
+    ESP_LOG_BUFFER_HEX("ESPNOW_RX", received_enc_key, ENC_KEY_LEN);
 }
 
 static void espnow_task(void *param)
@@ -33,11 +38,10 @@ static void espnow_task(void *param)
 	ESP_ERROR_CHECK(esp_now_init());
 	
 	//ESP_ERROR_CHECK(esp_funcs_espnow_init(UNIVERSAL_MAC, WIFI_CHANNEL)); // Configures peer
+	// Register receive callback
+    ESP_ERROR_CHECK(esp_funcs_espnow_register_recv_cb(on_data_recv));
     
 	while (1) {
-		
-	    // Register receive callback
-    	ESP_ERROR_CHECK(esp_funcs_espnow_register_recv_cb(on_data_recv));
 		
 		// Stop radio and de-initialize ESP-NOW
 	    //ESP_ERROR_CHECK(esp_funcs_espnow_deinit());
