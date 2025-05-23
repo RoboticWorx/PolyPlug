@@ -12,5 +12,5 @@ idf_component_register(
     	driver freertos
     
     PRIV_REQUIRES
-    	esp_wifi esp_netif
+    	 esp_wifi esp_netif gpio
 )

@@ -2,7 +2,9 @@
 #include "lora_task.h"
 
 #include "esp_log.h"
+
 #include "sx126x_hal.h"
+#include "gpio_funcs.h"
 
 #include <string.h>
 
@@ -115,13 +117,31 @@ void process_received_message(uint8_t *message, size_t message_len) {
 	ESP_LOGI(TAG, "Decrypted text: %s\n", ciphertext);
 	
 	// Check if contains correct value
-	if (strstr((char*)ciphertext, "PolyCast_Command_Value")) {
-    	ESP_LOGI(TAG, "Found PolyCast_Command_Value via strstr");
-    	gpio_set_level(26, relay_level);
-    	relay_level = !relay_level;
+	char *marker = "PolyCast_Command_Value:";
+	char *p = strstr((char*)ciphertext, marker);
+	if (p != NULL) {
+	    int cmd = 0;
+	    // Scan the number right after the marker
+	    if (sscanf(p, "PolyCast_Command_Value: %d", &cmd) == 1) {
+	        ESP_LOGI(TAG, "Parsed command value: %d", cmd);
+	        if (cmd == 0) {
+	            gpio_set_level(RELAY_PIN, relay_level);
+    			relay_level = !relay_level;
+	        }
+	        else if (cmd == 2) {
+	            // do action for 2
+	            gpio_set_level(RELAY_PIN, 0);
+	        }
+	        else {
+	            ESP_LOGW(TAG, "Unknown command %d", cmd);
+	        }
+	    }
+	    else {
+	        ESP_LOGE(TAG, "Failed to parse integer after marker");
+	    }
 	}
 	else {
-	    ESP_LOGI(TAG, "Did NOT find PolyCast_Command_Value via strstr");
+	    ESP_LOGI(TAG, "Marker not found");
 	}
 	
 	

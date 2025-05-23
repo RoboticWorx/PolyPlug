@@ -10,8 +10,8 @@ idf_component_register(
     	"include"
     
     REQUIRES
-    	driver freertos sx126x
+    	driver freertos
     
     PRIV_REQUIRES
-    	
+    	gpio sx126x
 )

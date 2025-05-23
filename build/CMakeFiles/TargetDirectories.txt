@@ -832,6 +832,13 @@ C:/ESPL/PolyPlug/build/esp-idf/lora/CMakeFiles/list_install_components.dir
 C:/ESPL/PolyPlug/build/esp-idf/lora/CMakeFiles/install.dir
 C:/ESPL/PolyPlug/build/esp-idf/lora/CMakeFiles/install/local.dir
 C:/ESPL/PolyPlug/build/esp-idf/lora/CMakeFiles/install/strip.dir
+C:/ESPL/PolyPlug/build/esp-idf/gpio/CMakeFiles/__idf_gpio.dir
+C:/ESPL/PolyPlug/build/esp-idf/gpio/CMakeFiles/edit_cache.dir
+C:/ESPL/PolyPlug/build/esp-idf/gpio/CMakeFiles/rebuild_cache.dir
+C:/ESPL/PolyPlug/build/esp-idf/gpio/CMakeFiles/list_install_components.dir
+C:/ESPL/PolyPlug/build/esp-idf/gpio/CMakeFiles/install.dir
+C:/ESPL/PolyPlug/build/esp-idf/gpio/CMakeFiles/install/local.dir
+C:/ESPL/PolyPlug/build/esp-idf/gpio/CMakeFiles/install/strip.dir
 C:/ESPL/PolyPlug/build/esp-idf/espnow/CMakeFiles/__idf_espnow.dir
 C:/ESPL/PolyPlug/build/esp-idf/espnow/CMakeFiles/edit_cache.dir
 C:/ESPL/PolyPlug/build/esp-idf/espnow/CMakeFiles/rebuild_cache.dir

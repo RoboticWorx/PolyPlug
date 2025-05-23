@@ -9,7 +9,8 @@ idf_component_register(
     PRIV_INCLUDE_DIRS   # optional, add here private include directories
     
     REQUIRES            # optional, list the public requirements (component names)
-    	lora sx126x espnow
-    	driver freertos nvs_flash esp_netif esp_wifi
+    	driver freertos nvs_flash esp_netif esp_wifi espnow
     PRIV_REQUIRES       # optional, list the private requirements
+    	lora sx126x gpio
+    	
 )
