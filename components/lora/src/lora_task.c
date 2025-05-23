@@ -206,11 +206,10 @@ static void lora_event_handler_task(void *pvParameters) {
 								   rx_buffer, rx_size);
 
 				ESP_LOGI(TAG, "Received packet of size %d:", rx_size);
-				for (int i = 0; i < rx_size; i++) {
+				/*for (int i = 0; i < rx_size; i++) {
 				    ESP_LOGI(TAG, "%02X", rx_buffer[i]);
-				}
+				}*/
 			
-
 				process_received_message(rx_buffer, rx_size);
 				
 				sx126x_pkt_status_lora_t pkt_status;

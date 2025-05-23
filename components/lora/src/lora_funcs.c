@@ -8,7 +8,14 @@
 
 static const char *TAG = "LORA_FUNCS";
 
-static uint8_t encryption_key[16] = {0};
+static uint8_t encryption_key[16] = {
+    0xec, 0xe8, 0xdf, 0x4f,
+    0xd7, 0x4c, 0x2d, 0x85,
+    0x31, 0x88, 0x14, 0x5c,
+    0xe6, 0x56, 0x9f, 0x86
+}; // A: ec e8 df 4f d7 4c 2d 85 31 88 14 5c e6 56 9f 86
+
+static bool relay_level = true;
 
 static void generate_random_iv(uint8_t *iv, size_t length) {
 	for (size_t i = 0; i < length; i++) {
@@ -77,11 +84,11 @@ void process_received_message(uint8_t *message, size_t message_len) {
 		   CYPHERTEXT_LENGTH); // Extract the ciphertext (remaining 64 bytes)
 
 	// Print the received IV
-	ESP_LOGI(TAG, "Received IV: ");
+	/*ESP_LOGI(TAG, "Received IV: ");
 	for (int i = 0; i < 16; i++) {
 		ESP_LOGI(TAG, "%02X", iv[i]);
 	}
-	ESP_LOGI(TAG, "\n");
+	ESP_LOGI(TAG, "\n");*/
 
 	// osStatus_t status = osMessageQueuePut(lora_hex_queue_rx, message, 0, 0);
 	// if (status != osOK)
@@ -106,6 +113,18 @@ void process_received_message(uint8_t *message, size_t message_len) {
 
 	// "cyphertext" is now decrypted - print
 	ESP_LOGI(TAG, "Decrypted text: %s\n", ciphertext);
+	
+	// Check if contains correct value
+	if (strstr((char*)ciphertext, "PolyCast_Command_Value")) {
+    	ESP_LOGI(TAG, "Found PolyCast_Command_Value via strstr");
+    	gpio_set_level(26, relay_level);
+    	relay_level = !relay_level;
+	}
+	else {
+	    ESP_LOGI(TAG, "Did NOT find PolyCast_Command_Value via strstr");
+	}
+	
+	
 }
 
 void encrypt_and_transmit(uint8_t plaintext[]) {

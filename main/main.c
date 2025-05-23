@@ -66,6 +66,15 @@ static void spi_shared_init(void) {
 
 void app_main(void) {
 	
+	gpio_config_t io_conf = {
+        .pin_bit_mask   = 1ULL << 26,    // bit mask for the pin(s)
+        .mode           = GPIO_MODE_OUTPUT,   // set as output
+        .pull_up_en     = GPIO_PULLUP_DISABLE,
+        .pull_down_en   = GPIO_PULLDOWN_DISABLE,
+        .intr_type      = GPIO_INTR_DISABLE,  // no interrupt
+    };
+    gpio_config(&io_conf);
+	
 	esp_err_t ret = nvs_flash_init();
     
     // Error check
@@ -98,7 +107,7 @@ void app_main(void) {
 	sx126x.hal_read = sx126x_hal_read;
 
 	// Create tasks
-	//lora_task_create();
+	lora_task_create();
 	espnow_task_create();
 
 	ESP_LOGI(TAG, "Main initialized and tasks created");
