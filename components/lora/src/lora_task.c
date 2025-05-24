@@ -181,7 +181,7 @@ static void lora_task(void *pvParameters) {
 		if (xQueueReceive(xReceivedEncKeyQueue, enc_key_buf, 1)) {
 			lora_set_key(enc_key_buf);
 		}
-		//ESP_LOG_BUFFER_HEX("CURRENT KEY", enc_key_buf, ENC_KEY_LEN);
+		ESP_LOG_BUFFER_HEX("CURRENT KEY", enc_key_buf, ENC_KEY_LEN);
 
 		vTaskDelay(pdMS_TO_TICKS(500));
 	}

@@ -10,7 +10,6 @@
 esp_err_t esp_lora_key_nvs_load(uint8_t *enc_key, const char* ns, const char* fmt);
 esp_err_t esp_lora_key_nvs_save(uint8_t *enc_key, const char* ns, const char* fmt);
 
-
 /**
  * @brief Initialize the Wi-Fi driver and allocate Wi-Fi buffers
  *
@@ -33,32 +32,11 @@ esp_err_t esp_funcs_wifi_radio_start(uint8_t channel);
 esp_err_t esp_funcs_wifi_radio_stop(void);
 
 /**
- * @brief Initialize ESP-NOW
- *
- * @param [in] mac MAC address to add as a peer
- * @param [in] channel Wi-Fi channel to configure to the peer
- *
- * @return ESP_OK on success
- */
-esp_err_t esp_funcs_espnow_init(const uint8_t *mac, uint8_t channel);
-
-/**
  * @brief De-initialize ESP-NOW
  *
  * @return ESP_OK on success
  */
 esp_err_t esp_funcs_espnow_deinit(void);
-
-/**
- * @brief Send data via ESP-NOW
- *
- * @param [in] mac MAC address to send the data to
- * @param [in] data Data to send
- * @param [in] len Length of the data to send
- *
- * @return ESP_OK on success
- */
-esp_err_t esp_funcs_espnow_send_broadcast(const uint8_t *mac, const uint8_t *data, size_t len);
 
 /**
  * @brief Register an ESP-NOW receive callback

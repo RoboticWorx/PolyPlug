@@ -27,6 +27,8 @@ static const char *TAG = "MAIN";
 void app_main(void) {
 	
 	esp_err_t ret = nvs_flash_init();
+	
+	//nvs_flash_erase();
     
     // Error check
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {

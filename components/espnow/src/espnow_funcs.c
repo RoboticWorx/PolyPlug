@@ -54,50 +54,6 @@ esp_err_t esp_funcs_wifi_radio_stop(void)
     return ESP_OK;
 }
 
-static void send_cb(const uint8_t *mac, esp_now_send_status_t status)
-{
-    ESP_LOGI(TAG,
-             "Send to %02X:%02X:%02X:%02X:%02X:%02X → %s",
-             mac[0],mac[1],mac[2],mac[3],mac[4],mac[5],
-             status == ESP_NOW_SEND_SUCCESS ? "OK" : "FAIL");
-}
-
-esp_err_t esp_funcs_espnow_init(const uint8_t *mac, uint8_t channel)
-{
-    esp_err_t err;
-
-	// Initialize ESP-NOW
-    err = esp_now_init();
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "esp_now_init failed: %s", esp_err_to_name(err));
-        return err;
-    }
-    
-    // Register send callback
-    err = esp_now_register_send_cb(send_cb);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "register_send_cb failed: %s", esp_err_to_name(err));
-        return err;
-    }
-
-    // Configure peer
-    esp_now_peer_info_t peer = {
-        .ifidx   = ESP_IF_WIFI_STA,
-        .channel = channel,
-        .encrypt = false,
-    };
-    memcpy(peer.peer_addr, mac, ESP_NOW_ETH_ALEN);
-    
-    // Register peer
-    err = esp_now_add_peer(&peer);
-    if (err != ESP_OK && err != ESP_ERR_ESPNOW_EXIST) {
-        ESP_LOGE(TAG, "add_peer failed: %s", esp_err_to_name(err));
-        return err;
-    }
-
-    return ESP_OK;
-}
-
 esp_err_t esp_funcs_espnow_deinit(void)
 {
 	// De-initialize ESP-NOW
@@ -107,17 +63,6 @@ esp_err_t esp_funcs_espnow_deinit(void)
     }
     
     return err;
-}
-
-esp_err_t esp_funcs_espnow_send_broadcast(const uint8_t *mac, const uint8_t *data, size_t len)
-{
-	// Cap at max length
-    if (len > ESP_NOW_MAX_DATA_LEN) {
-        len = ESP_NOW_MAX_DATA_LEN;
-    }
-    
-    // Send to given MAC
-    return esp_now_send(mac, data, len);
 }
 
 esp_err_t esp_funcs_espnow_register_recv_cb(esp_now_recv_cb_t cb)

@@ -45,17 +45,16 @@ static void espnow_task(void *param)
 		ESP_LOGE(TAG, "Failed to create xReceivedEncKeyQueue semaphore");
 	}
 	
-	esp_lora_key_nvs_load(received_enc_key, LORA_ENC_NS, LORA_ENC_FMT);
-	
-	if (received_enc_key[0] != 0) {
-		xQueueSend(xReceivedEncKeyQueue, received_enc_key, portMAX_DELAY);
+	esp_err_t err = esp_lora_key_nvs_load(received_enc_key, LORA_ENC_NS, LORA_ENC_FMT);
+	if (err == ESP_OK) {
+	    // If key existed, send
+	    xQueueSend(xReceivedEncKeyQueue, received_enc_key, portMAX_DELAY);
 	}
 	
     // Start radio and initialize ESP-NOW
 	ESP_ERROR_CHECK(esp_funcs_wifi_radio_start(WIFI_CHANNEL));
 	ESP_ERROR_CHECK(esp_now_init());
 	
-	//ESP_ERROR_CHECK(esp_funcs_espnow_init(UNIVERSAL_MAC, WIFI_CHANNEL)); // Configures peer
 	// Register receive callback
     ESP_ERROR_CHECK(esp_funcs_espnow_register_recv_cb(on_data_recv));
     
