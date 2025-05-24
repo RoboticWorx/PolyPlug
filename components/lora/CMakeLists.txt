@@ -13,5 +13,5 @@ idf_component_register(
     	driver freertos
     
     PRIV_REQUIRES
-    	gpio sx126x
+    	gpio sx126x espnow
 )

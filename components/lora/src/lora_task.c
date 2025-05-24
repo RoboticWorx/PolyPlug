@@ -3,6 +3,7 @@
 #include "sx126x.h"
 
 #include "esp_log.h"
+#include "espnow_task.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -16,6 +17,7 @@ static SemaphoreHandle_t tx_done_semaphore;
 static void lora_event_handler_task(void *pvParameters);
 
 static uint8_t value_to_transmit = 0;
+static uint8_t enc_key_buf[ENC_KEY_LEN] = {0};
 
 // ISR handler for DIO1
 static void IRAM_ATTR dio1_isr_handler(void *arg) {
@@ -48,7 +50,7 @@ static void lora_task(void *pvParameters) {
 				NULL);
 
 	sx126x_mod_params_lora_t lora_mod_params = {
-		.sf = SX126X_LORA_SF9, // Spreading factor (higher value sends further
+		.sf = SX126X_LORA_SF7, // Spreading factor (higher value sends further
 							   // but takes more time)
 		.bw = SX126X_LORA_BW_125, // Bandwidth
 		.cr = SX126X_LORA_CR_4_5, // Error correction
@@ -171,10 +173,15 @@ static void lora_task(void *pvParameters) {
 	gpio_install_isr_service(0);
 	gpio_isr_handler_add(SX126X_DIO1_PIN, dio1_isr_handler, NULL);
 	
-	set_lora_rx_mode(); // Listen for receipt from receiver
+	lora_set_rx_mode(); // Listen for receipt from receiver
 
 	char payload[CYPHERTEXT_LENGTH] = {0}; // Hold data to send
 	for (;;) {
+		
+		if (xQueueReceive(xReceivedEncKeyQueue, enc_key_buf, 1)) {
+			lora_set_key(enc_key_buf);
+		}
+		//ESP_LOG_BUFFER_HEX("CURRENT KEY", enc_key_buf, ENC_KEY_LEN);
 
 		vTaskDelay(pdMS_TO_TICKS(500));
 	}
@@ -210,7 +217,7 @@ static void lora_event_handler_task(void *pvParameters) {
 				    ESP_LOGI(TAG, "%02X", rx_buffer[i]);
 				}*/
 			
-				process_received_message(rx_buffer, rx_size);
+				lora_process_received_message(rx_buffer, rx_size);
 				
 				sx126x_pkt_status_lora_t pkt_status;
 			    if (sx126x_get_lora_pkt_status(NULL, &pkt_status) == SX126X_STATUS_OK) {
@@ -225,7 +232,7 @@ static void lora_event_handler_task(void *pvParameters) {
 				// Clear IRQ
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_RX_DONE);
 				
-				set_lora_rx_mode(); // Prepare to receive next tr
+				lora_set_rx_mode(); // Prepare to receive next tr
 			}
 
 			if (irq_flags & SX126X_IRQ_TIMEOUT) {

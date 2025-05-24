@@ -4,6 +4,13 @@
 #include "esp_err.h"
 #include "esp_now.h"
 
+#define LORA_ENC_NS "es_lo_ns" // NVS namespace
+#define LORA_ENC_FMT "es_lo_fmt" // FMT
+
+esp_err_t esp_lora_key_nvs_load(uint8_t *enc_key, const char* ns, const char* fmt);
+esp_err_t esp_lora_key_nvs_save(uint8_t *enc_key, const char* ns, const char* fmt);
+
+
 /**
  * @brief Initialize the Wi-Fi driver and allocate Wi-Fi buffers
  *

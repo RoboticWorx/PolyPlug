@@ -1,23 +1,25 @@
-#include "lora_funcs.h"
-#include "lora_task.h"
+#include <string.h>
 
 #include "esp_log.h"
 
-#include "sx126x_hal.h"
-#include "gpio_funcs.h"
+#include "lora_funcs.h"
+#include "lora_task.h"
 
-#include <string.h>
+#include "sx126x_hal.h"
+
+#include "espnow_task.h"
+
+#include "gpio_funcs.h"
 
 static const char *TAG = "LORA_FUNCS";
 
-static uint8_t encryption_key[16] = {
-    0xec, 0xe8, 0xdf, 0x4f,
-    0xd7, 0x4c, 0x2d, 0x85,
-    0x31, 0x88, 0x14, 0x5c,
-    0xe6, 0x56, 0x9f, 0x86
-}; // A: ec e8 df 4f d7 4c 2d 85 31 88 14 5c e6 56 9f 86
+static uint8_t encryption_key[16] = {0};
 
 static bool relay_level = true;
+
+void lora_set_key(const uint8_t *key) {
+    memcpy(encryption_key, key, ENC_KEY_LEN);
+}
 
 static void generate_random_iv(uint8_t *iv, size_t length) {
 	for (size_t i = 0; i < length; i++) {
@@ -25,7 +27,7 @@ static void generate_random_iv(uint8_t *iv, size_t length) {
 	}
 }
 
-void set_lora_rx_mode(void) // Call once to set RX mode and receive on EXTI8
+void lora_set_rx_mode(void) // Call once to set RX mode and receive on EXTI8
 {
 
 	while (gpio_get_level(SX126X_BUSY_PIN) == 1) {
@@ -64,7 +66,7 @@ void lora_tx(uint8_t tx_data[], uint8_t data_len) {
 	}
 }
 
-void process_received_message(uint8_t *message, size_t message_len) {
+void lora_process_received_message(uint8_t *message, size_t message_len) {
 	// Verify that the message length is at least 16 bytes (for IV) + 16 bytes
 	// (minimum ciphertext)
 	if (message_len < 32) {
@@ -128,9 +130,9 @@ void process_received_message(uint8_t *message, size_t message_len) {
 	            gpio_set_level(RELAY_PIN, relay_level);
     			relay_level = !relay_level;
 	        }
-	        else if (cmd == 2) {
-	            // do action for 2
-	            gpio_set_level(RELAY_PIN, 0);
+	        else if (cmd == 1) {
+	            // do action for 1
+	            // ...
 	        }
 	        else {
 	            ESP_LOGW(TAG, "Unknown command %d", cmd);
@@ -147,7 +149,7 @@ void process_received_message(uint8_t *message, size_t message_len) {
 	
 }
 
-void encrypt_and_transmit(uint8_t plaintext[]) {
+void lora_encrypt_and_transmit(uint8_t plaintext[]) {
 
 	uint8_t buffer[CYPHERTEXT_LENGTH]; // Padded to 64 bytes (must be multiple
 									   // of 16)
@@ -188,3 +190,4 @@ void encrypt_and_transmit(uint8_t plaintext[]) {
 
 	lora_tx(message, sizeof(message)); // Send the data
 }
+

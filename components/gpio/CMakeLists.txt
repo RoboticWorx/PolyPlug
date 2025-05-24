@@ -9,7 +9,7 @@ idf_component_register(
     	"include"
     
     REQUIRES
-    	driver freertos
+    	driver freertos nvs_flash
     
     PRIV_REQUIRES
     	lora sx126x

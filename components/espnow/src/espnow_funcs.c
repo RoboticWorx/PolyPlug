@@ -1,5 +1,7 @@
 #include <string.h>
 
+#include "nvs.h"
+
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "esp_netif.h"
@@ -8,8 +10,11 @@
 #include "esp_err.h"
 
 #include "espnow_funcs.h"
+#include "espnow_task.h"
 
 #define TAG "ESP_FUNCS"
+
+extern uint8_t received_enc_key[ENC_KEY_LEN];
 
 esp_err_t esp_funcs_wifi_driver_init(void)
 {
@@ -125,3 +130,49 @@ esp_err_t esp_funcs_espnow_register_recv_cb(esp_now_recv_cb_t cb)
     
     return err;
 }
+
+esp_err_t esp_lora_key_nvs_save(uint8_t *enc_key, const char* ns, const char* fmt)
+{
+    nvs_handle_t h;
+
+    // Open NVS
+    esp_err_t err = nvs_open(ns, NVS_READWRITE, &h);
+    if (err != ESP_OK)
+    	return err;
+        
+    // Store the key
+    err = nvs_set_blob(h, fmt, enc_key, ENC_KEY_LEN);
+    
+    // Flush pending writes to flash
+    err = nvs_commit(h);
+
+	// Close NVS
+	nvs_close(h);
+	
+    return err;
+}
+
+esp_err_t esp_lora_key_nvs_load(uint8_t *enc_key, const char* ns, const char* fmt)
+{
+    nvs_handle_t h;
+        
+    // Open NVS
+    esp_err_t err = nvs_open(ns, NVS_READONLY, &h);
+    if (err != ESP_OK)
+    	return err;
+    	
+    size_t len = ENC_KEY_LEN;
+
+    err = nvs_get_blob(h, fmt, enc_key, &len);
+    
+    // Close NVS
+    nvs_close(h);
+    
+    if (err == ESP_ERR_NVS_NOT_FOUND)
+    	return err;
+    if (err == ESP_OK && len != ENC_KEY_LEN)
+    	return ESP_ERR_INVALID_SIZE;
+    
+    return err;
+}
+
