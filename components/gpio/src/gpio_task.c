@@ -10,6 +10,8 @@
 
 static const char *TAG = "GPIO_TASK";
 
+static bool relay_level = true;
+
 relay_t relay_rx;
 
 QueueHandle_t xRelayToggleQueue;
@@ -24,32 +26,51 @@ static void gpio_task(void *arg)
 		
 	while (1) 
 	{
-		// If received queue data 
+		// If received queue data (loop command)
 		if (xQueueReceive(xRelayToggleQueue, &relay_rx, 1) == pdPASS) {
-			ESP_LOGI(TAG, "RECEIVED: on=%s, off=%s", relay_rx.loop_on, relay_rx.loop_off);
+			if (relay_rx.index == 0) {
+				gpio_set_level(RELAY_PIN, relay_level);
+    			relay_level = !relay_level;
+			}
+			else if (relay_rx.index == 1) {
+				ESP_LOGI(TAG, "RECEIVED: on=%s, off=%s", relay_rx.loop_on, relay_rx.loop_off);
 
-            // Turn received time on/off into ticks
-            TickType_t on_ticks = gpio_lookup_time_ticks(relay_rx.loop_on);
-            TickType_t off_ticks = gpio_lookup_time_ticks(relay_rx.loop_off);
-
-            // Loop until a new pattern arrives
-            while(1) {
-				
-                // Check if a new command has come in _without_ blocking
-                if (xQueueReceive(xRelayToggleQueue, &relay_rx, 0) == pdPASS) {
-                    // Break out to outer loop
-                    ESP_LOGI(TAG, "Pattern updated: on=%s off=%s", relay_rx.loop_on, relay_rx.loop_off);
-                    break;
-                }
-                
-                // Otherwise drive the pins at their given periods
-                gpio_set_level(RELAY_PIN, 1);
-                vTaskDelay(on_ticks);
-
-                gpio_set_level(RELAY_PIN, 0);
-                vTaskDelay(off_ticks);
-            }
+	            // Turn received time on/off into ticks
+	            TickType_t on_ticks = gpio_lookup_time_ticks(relay_rx.loop_on);
+	            TickType_t off_ticks = gpio_lookup_time_ticks(relay_rx.loop_off);
+	
+	            // Loop until new data arrives
+	            while(1) {
+					
+	                // Start ON loop for duration until new data received
+	                gpio_set_level(RELAY_PIN, 1);
+	                relay_level = false; // False to toggle from true if toggle cmd sent
+	                if (xQueueReceive(xRelayToggleQueue, &relay_rx, on_ticks) == pdPASS) {
+	                    ESP_LOGI(TAG, "Pattern updated during ON: index=%d on=%s off=%s",
+							relay_rx.index, relay_rx.loop_on, relay_rx.loop_off);
+							
+						// Re-send data to unlock queue at the top
+						xQueueSend(xRelayToggleQueue, &relay_rx, 1);
+						
+	                    break;
+	                }
+	                
+	                // Start OFF loop for duration until new data received
+	                gpio_set_level(RELAY_PIN, 0);
+	                relay_level = true; // True to toggle from false if toggle cmd sent
+	                if (xQueueReceive(xRelayToggleQueue, &relay_rx, off_ticks) == pdPASS) {
+						ESP_LOGI(TAG, "Pattern updated during OFF: index=%d on=%s off=%s",
+							relay_rx.index, relay_rx.loop_on, relay_rx.loop_off);
+						
+						// Re-send data to unlock queue at the top
+						xQueueSend(xRelayToggleQueue, &relay_rx, 1);
+						
+	                    break;
+	                }
+	            }
+			}
 		}
+			
 		vTaskDelay(pdMS_TO_TICKS(10));
 	}
 }

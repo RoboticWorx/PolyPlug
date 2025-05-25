@@ -18,8 +18,6 @@ static relay_t relay_tx;
 
 static uint8_t encryption_key[16] = {0};
 
-static bool relay_level = true;
-
 void lora_set_key(const uint8_t *key) {
     memcpy(encryption_key, key, ENC_KEY_LEN);
 }
@@ -131,13 +129,15 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	    if (sscanf(p, "PolyCast_Command_Value: %d %n", &cmd, &n) == 1) {
 	        ESP_LOGI(TAG, "Parsed command value: %d", cmd);
 	        
+	        // Assign extracted index to relay struct
+	        relay_tx.index = cmd;
+	        
 	        // Advance by number of chars read so far
 	        p += n;
 	        
 	        // Simple toggle
 	        if (cmd == 0) {
-	            gpio_set_level(RELAY_PIN, relay_level);
-    			relay_level = !relay_level;
+				xQueueSend(xRelayToggleQueue, &relay_tx, 1);
 	        }
 	        // Loop with specific times
 	        else if (cmd == 1) {

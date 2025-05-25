@@ -7,6 +7,7 @@
 #define LOOP_LEN 4
 
 typedef struct {
+	int index;
     char loop_on[LOOP_LEN];
     char loop_off[LOOP_LEN];
 } relay_t;
