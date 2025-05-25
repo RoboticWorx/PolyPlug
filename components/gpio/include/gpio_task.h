@@ -4,7 +4,14 @@
 #include "freertos/FreeRTOS.h"
 //#include "freertos/semphr.h"
 
-//extern SemaphoreHandle_t xSPIBusMutex;
+#define LOOP_LEN 4
+
+typedef struct {
+    char loop_on[LOOP_LEN];
+    char loop_off[LOOP_LEN];
+} relay_t;
+
+extern QueueHandle_t xRelayToggleQueue;
 
 /**
  * @brief  Create the GPIO expander task.

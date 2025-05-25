@@ -50,6 +50,7 @@ void app_main(void) {
 	gpio_init();
 
 	// Create tasks
+	gpio_task_create();
 	lora_task_create();
 	espnow_task_create();
 

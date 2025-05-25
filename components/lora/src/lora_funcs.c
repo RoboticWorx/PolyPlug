@@ -10,8 +10,11 @@
 #include "espnow_task.h"
 
 #include "gpio_funcs.h"
+#include "gpio_task.h"
 
 static const char *TAG = "LORA_FUNCS";
+
+static relay_t relay_tx;
 
 static uint8_t encryption_key[16] = {0};
 
@@ -124,15 +127,26 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	if (p != NULL) {
 	    int cmd = 0;
 	    // Scan the number right after the marker
-	    if (sscanf(p, "PolyCast_Command_Value: %d", &cmd) == 1) {
+	    int n;
+	    if (sscanf(p, "PolyCast_Command_Value: %d %n", &cmd, &n) == 1) {
 	        ESP_LOGI(TAG, "Parsed command value: %d", cmd);
+	        
+	        // Advance by number of chars read so far
+	        p += n;
+	        
+	        // Simple toggle
 	        if (cmd == 0) {
 	            gpio_set_level(RELAY_PIN, relay_level);
     			relay_level = !relay_level;
 	        }
+	        // Loop with specific times
 	        else if (cmd == 1) {
-	            // do action for 1
-	            // ...
+				char on_arg[LOOP_LEN], off_arg[LOOP_LEN];
+	            if (sscanf(p, "on %3s off %3s", on_arg, off_arg) == 2) {
+					memcpy(relay_tx.loop_on, on_arg, LOOP_LEN);
+					memcpy(relay_tx.loop_off, off_arg, LOOP_LEN);
+					xQueueSend(xRelayToggleQueue, &relay_tx, 1);
+	            }
 	        }
 	        else {
 	            ESP_LOGW(TAG, "Unknown command %d", cmd);
