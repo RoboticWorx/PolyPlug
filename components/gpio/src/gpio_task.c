@@ -23,7 +23,7 @@ static void gpio_task(void *arg)
 	if (xRelayToggleQueue == NULL) {
 		ESP_LOGE(TAG, "Failed to create xRelayToggleQueue");
 	}
-		
+	
 	while (1) 
 	{
 		// If received queue data (loop command)
