@@ -8,7 +8,7 @@
 
 #define ENC_KEY_LEN 16
 
-extern QueueHandle_t xReceivedEncKeyQueue;
+extern QueueHandle_t xEspReceivedEncKeyQueue;
 
 /**
  * @brief Create the ESP-NOW task

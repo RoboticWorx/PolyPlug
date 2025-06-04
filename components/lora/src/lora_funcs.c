@@ -18,6 +18,8 @@ static relay_t relay_tx;
 
 static uint8_t encryption_key[16] = {0};
 
+static bool valid_data_rec = false;
+
 void lora_set_key(const uint8_t *key) {
     memcpy(encryption_key, key, ENC_KEY_LEN);
 }
@@ -126,6 +128,8 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	    int cmd = 0;
 	    // Scan the number right after the marker
 	    int n;
+	    
+	    // Check if format is correct
 	    if (sscanf(p, "PolyCast_Command_Value: %d %n", &cmd, &n) == 1) {
 	        ESP_LOGI(TAG, "Parsed command value: %d", cmd);
 	        
@@ -138,6 +142,9 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	        // Simple toggle
 	        if (cmd == 0) {
 				xQueueSend(xRelayToggleQueue, &relay_tx, 1);
+				
+				// Send receipt
+				valid_data_rec = true;
 	        }
 	        // Loop with specific times
 	        else if (cmd == 1) {
@@ -146,21 +153,53 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 					memcpy(relay_tx.loop_on, on_arg, LOOP_LEN);
 					memcpy(relay_tx.loop_off, off_arg, LOOP_LEN);
 					xQueueSend(xRelayToggleQueue, &relay_tx, 1);
+					
+					// Send receipt
+					valid_data_rec = true;
 	            }
 	        }
 	        else {
 	            ESP_LOGW(TAG, "Unknown command %d", cmd);
+	            
+	            // Don't send receipt
+	            valid_data_rec = false;
 	        }
 	    }
 	    else {
 	        ESP_LOGE(TAG, "Failed to parse integer after marker");
+	        
+	        // Don't send receipt
+	        valid_data_rec = false;
 	    }
 	}
 	else {
 	    ESP_LOGI(TAG, "Marker not found");
+	    
+	    // Don't send receipt
+	    valid_data_rec = false;
+	}	
+}
+
+void lora_send_receipt()
+{
+	if (valid_data_rec) {
+		// Hold data to send
+		char payload[CYPHERTEXT_LENGTH] = {0};
+		
+		// Format command into string
+		snprintf(payload, sizeof(payload), "PolyCast_Command_Value_Received");
+	
+		ESP_LOGI(TAG, "SENDING: %s", payload);
+	
+		// Encrypt and send over
+		lora_encrypt_and_transmit((uint8_t *)payload);
+		
+		// Reset valid marker
+		valid_data_rec = false;
 	}
-	
-	
+	else {
+		lora_set_rx_mode(); // Reset RX
+	}
 }
 
 void lora_encrypt_and_transmit(uint8_t plaintext[]) {

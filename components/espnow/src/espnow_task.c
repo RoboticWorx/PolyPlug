@@ -15,7 +15,7 @@
 
 uint8_t received_enc_key[ENC_KEY_LEN] = {0};
 
-QueueHandle_t xReceivedEncKeyQueue;
+QueueHandle_t xEspReceivedEncKeyQueue;
 
 //static const uint8_t UNIVERSAL_MAC[ESP_NOW_ETH_ALEN] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
@@ -34,21 +34,21 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
     esp_lora_key_nvs_save(received_enc_key, LORA_ENC_NS, LORA_ENC_FMT);
     
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    xQueueSendFromISR(xReceivedEncKeyQueue, received_enc_key, &xHigherPriorityTaskWoken);
+    xQueueSendFromISR(xEspReceivedEncKeyQueue, received_enc_key, &xHigherPriorityTaskWoken);
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 static void espnow_task(void *param)
 {
-	xReceivedEncKeyQueue = xQueueCreate(1, sizeof(received_enc_key));
-	if (xReceivedEncKeyQueue == NULL) {
-		ESP_LOGE(TAG, "Failed to create xReceivedEncKeyQueue semaphore");
+	xEspReceivedEncKeyQueue = xQueueCreate(1, sizeof(received_enc_key));
+	if (xEspReceivedEncKeyQueue == NULL) {
+		ESP_LOGE(TAG, "Failed to create xEspReceivedEncKeyQueue semaphore");
 	}
 	
 	esp_err_t err = esp_lora_key_nvs_load(received_enc_key, LORA_ENC_NS, LORA_ENC_FMT);
 	if (err == ESP_OK) {
 	    // If key existed, send
-	    xQueueSend(xReceivedEncKeyQueue, received_enc_key, portMAX_DELAY);
+	    xQueueSend(xEspReceivedEncKeyQueue, received_enc_key, portMAX_DELAY);
 	}
 	
     // Start radio and initialize ESP-NOW

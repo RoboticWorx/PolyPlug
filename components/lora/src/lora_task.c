@@ -11,12 +11,11 @@
 
 static const char *TAG = "LORA_TASK";
 
-static SemaphoreHandle_t lora_event_semaphore;
-static SemaphoreHandle_t tx_done_semaphore;
+static SemaphoreHandle_t xLoraEventSemaphore;
+static SemaphoreHandle_t xTXDoneSemaphore;
 
 static void lora_event_handler_task(void *pvParameters);
 
-static uint8_t value_to_transmit = 0;
 static uint8_t enc_key_buf[ENC_KEY_LEN] = {0};
 
 // ISR handler for DIO1
@@ -24,7 +23,7 @@ static void IRAM_ATTR dio1_isr_handler(void *arg) {
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 	// Signal the event handler task
-	xSemaphoreGiveFromISR(lora_event_semaphore, &xHigherPriorityTaskWoken);
+	xSemaphoreGiveFromISR(xLoraEventSemaphore, &xHigherPriorityTaskWoken);
 
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
@@ -33,14 +32,14 @@ static void IRAM_ATTR dio1_isr_handler(void *arg) {
 static void lora_task(void *pvParameters) {
 	
 	// Create the semaphore for LoRa events
-	lora_event_semaphore = xSemaphoreCreateBinary();
-	if (lora_event_semaphore == NULL) {
+	xLoraEventSemaphore = xSemaphoreCreateBinary();
+	if (xLoraEventSemaphore == NULL) {
 		ESP_LOGE(TAG, "Failed to create LoRa event semaphore");
 		vTaskDelete(NULL);
 	}
 
-	tx_done_semaphore = xSemaphoreCreateBinary();
-	if (tx_done_semaphore == NULL) {
+	xTXDoneSemaphore = xSemaphoreCreateBinary();
+	if (xTXDoneSemaphore == NULL) {
 		ESP_LOGE(TAG, "Failed to create TX_DONE semaphore");
 		vTaskDelete(NULL);
 	}
@@ -175,10 +174,10 @@ static void lora_task(void *pvParameters) {
 	
 	lora_set_rx_mode(); // Listen for receipt from receiver
 
-	char payload[CYPHERTEXT_LENGTH] = {0}; // Hold data to send
+	
 	for (;;) {
 		
-		if (xQueueReceive(xReceivedEncKeyQueue, enc_key_buf, 1)) {
+		if (xQueueReceive(xEspReceivedEncKeyQueue, enc_key_buf, 1)) {
 			lora_set_key(enc_key_buf);
 		}
 		//ESP_LOG_BUFFER_HEX("CURRENT KEY", enc_key_buf, ENC_KEY_LEN);
@@ -188,66 +187,80 @@ static void lora_task(void *pvParameters) {
 }
 
 static void lora_event_handler_task(void *pvParameters) {
+	
 	for (;;) {
 		// Wait for an event from the ISR
-		if (xSemaphoreTake(lora_event_semaphore, portMAX_DELAY) == pdTRUE) {
+		if (xSemaphoreTake(xLoraEventSemaphore, portMAX_DELAY) == pdTRUE) {
 			// Check IRQ flags
 			uint16_t irq_flags = 0;
 			sx126x_get_irq_status(NULL, &irq_flags);
 
+			// If transmission complete
 			if (irq_flags & SX126X_IRQ_TX_DONE) {
 				ESP_LOGI(TAG, "Transmission completed");
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_TX_DONE);
-				xSemaphoreGive(tx_done_semaphore); // Signal TX_DONE
+				lora_set_rx_mode(); // Prepare to receive next transmission
 			}
-
-			if (irq_flags & SX126X_IRQ_RX_DONE) {
+			// Else if receive complete
+			else if (irq_flags & SX126X_IRQ_RX_DONE) {
 				// Read the received packet
+				
 				uint8_t rx_buffer[PAYLOAD_LENGTH];
 				uint8_t rx_size = 0;
+				
 				sx126x_rx_buffer_status_t rx_status;
+				
+				// Check RX
 				sx126x_get_rx_buffer_status(NULL, &rx_status);
+				
+				// Get size of packet
 				rx_size = rx_status.pld_len_in_bytes;
 
+				// Read data into buffer
 				sx126x_read_buffer(NULL, rx_status.buffer_start_pointer,
 								   rx_buffer, rx_size);
 
-				ESP_LOGI(TAG, "Received packet of size %d:", rx_size);
-				/*for (int i = 0; i < rx_size; i++) {
-				    ESP_LOGI(TAG, "%02X", rx_buffer[i]);
-				}*/
-			
+				ESP_LOGI(TAG, "Received packet of size %d", rx_size);
+
+				// Process received
 				lora_process_received_message(rx_buffer, rx_size);
 				
+				// Log RSSI
 				sx126x_pkt_status_lora_t pkt_status;
 			    if (sx126x_get_lora_pkt_status(NULL, &pkt_status) == SX126X_STATUS_OK) {
 			        ESP_LOGI(TAG, "Packet RSSI: %d dBm, SignalRSSI: %d dBm, SNR: %d dB",
 			                 pkt_status.rssi_pkt_in_dbm,
 			                 pkt_status.signal_rssi_pkt_in_dbm,
 			                 pkt_status.snr_pkt_in_db);
-			    } else {
+			    }
+			    else {
 			        ESP_LOGW(TAG, "Failed to get packet status");
 			    }
 
 				// Clear IRQ
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_RX_DONE);
 				
-				lora_set_rx_mode(); // Prepare to receive next tr
+				// Send a receipt to confirm with sender if data was valid
+				lora_send_receipt();
+
 			}
 
 			if (irq_flags & SX126X_IRQ_TIMEOUT) {
 				ESP_LOGW(TAG, "RX timeout occurred");
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_TIMEOUT);
+				lora_set_rx_mode(); // Reset RX
 			}
 
 			if (irq_flags & SX126X_IRQ_HEADER_ERROR) {
 				ESP_LOGE(TAG, "Header error in received packet");
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_HEADER_ERROR);
+				lora_set_rx_mode(); // Reset RX
 			}
 
 			if (irq_flags & SX126X_IRQ_CRC_ERROR) {
 				ESP_LOGE(TAG, "CRC error in received packet");
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_CRC_ERROR);
+				lora_set_rx_mode(); // Reset RX
 			}
 		}
 	}

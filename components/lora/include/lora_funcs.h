@@ -12,6 +12,7 @@
 void lora_set_key(const uint8_t *key);
 void lora_set_rx_mode(void);
 void lora_process_received_message(uint8_t *message, size_t message_len);
+void lora_send_receipt();
 
 void lora_tx(uint8_t tx_data[], uint8_t data_len);
 void lora_encrypt_and_transmit(uint8_t plaintext[]);

@@ -1,5 +1,5 @@
 [1/5] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\ESPL\PolyPlug\build\esp-idf\esptool_py && C:\Espressif\python_env\idf5.4_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.4/components/partition_table/check_sizes.py --offset 0x8000 partition --type app C:/ESPL/PolyPlug/build/partition_table/partition-table.bin C:/ESPL/PolyPlug/build/app-template.bin"
-app-template.bin binary size 0xcf220 bytes. Smallest app partition is 0x100000 bytes. 0x30de0 bytes (19%) free.
+app-template.bin binary size 0xcf6c0 bytes. Smallest app partition is 0x100000 bytes. 0x30940 bytes (19%) free.
 [2/5] Performing build step for 'bootloader'
 [1/1] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\ESPL\PolyPlug\build\bootloader\esp-idf\esptool_py && C:\Espressif\python_env\idf5.4_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.4/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x2000 C:/ESPL/PolyPlug/build/bootloader/bootloader.bin"
 Bootloader binary size 0x53e0 bytes. 0xc20 bytes (13%) free.
@@ -26,46 +26,46 @@ Configuring flash size...
 Flash will be erased from 0x00002000 to 0x00007fff...
 Flash will be erased from 0x00010000 to 0x000dffff...
 Flash will be erased from 0x00008000 to 0x00008fff...
-Compressed 21472 bytes to 13116...
+Compressed 21472 bytes to 13114...
 Writing at 0x00002000... (100 %)
-Wrote 21472 bytes (13116 compressed) at 0x00002000 in 0.2 seconds (effective 750.1 kbit/s)...
+Wrote 21472 bytes (13114 compressed) at 0x00002000 in 0.2 seconds (effective 749.0 kbit/s)...
 Hash of data verified.
-Compressed 848416 bytes to 486950...
+Compressed 849600 bytes to 487512...
 Writing at 0x00010000... (3 %)
-Writing at 0x0001c29e... (6 %)
-Writing at 0x0002568b... (10 %)
-Writing at 0x0002f326... (13 %)
-Writing at 0x0003610b... (16 %)
-Writing at 0x0003da74... (20 %)
-Writing at 0x000457d0... (23 %)
-Writing at 0x0004c5aa... (26 %)
-Writing at 0x00052bc5... (30 %)
-Writing at 0x000594ac... (33 %)
-Writing at 0x000602d4... (36 %)
-Writing at 0x00065f17... (40 %)
-Writing at 0x0006be02... (43 %)
-Writing at 0x00071c87... (46 %)
-Writing at 0x00077e46... (50 %)
-Writing at 0x0007e729... (53 %)
-Writing at 0x00084569... (56 %)
-Writing at 0x0008a345... (60 %)
-Writing at 0x0009091d... (63 %)
-Writing at 0x0009734c... (66 %)
-Writing at 0x0009e3d0... (70 %)
-Writing at 0x000a546f... (73 %)
-Writing at 0x000ac13c... (76 %)
-Writing at 0x000b22c4... (80 %)
-Writing at 0x000b86d6... (83 %)
-Writing at 0x000bebb8... (86 %)
-Writing at 0x000c4f63... (90 %)
-Writing at 0x000cbd56... (93 %)
-Writing at 0x000d29b4... (96 %)
-Writing at 0x000d89b6... (100 %)
-Wrote 848416 bytes (486950 compressed) at 0x00010000 in 3.6 seconds (effective 1895.7 kbit/s)...
+Writing at 0x0001c2c9... (6 %)
+Writing at 0x000256cd... (10 %)
+Writing at 0x0002f36c... (13 %)
+Writing at 0x00036154... (16 %)
+Writing at 0x0003da40... (20 %)
+Writing at 0x0004588c... (23 %)
+Writing at 0x0004c701... (26 %)
+Writing at 0x00052caa... (30 %)
+Writing at 0x000595d8... (33 %)
+Writing at 0x000603f3... (36 %)
+Writing at 0x000660bb... (40 %)
+Writing at 0x0006bf0a... (43 %)
+Writing at 0x00071d8e... (46 %)
+Writing at 0x00077f17... (50 %)
+Writing at 0x0007e84c... (53 %)
+Writing at 0x000846ea... (56 %)
+Writing at 0x0008a479... (60 %)
+Writing at 0x00090a1c... (63 %)
+Writing at 0x00097435... (66 %)
+Writing at 0x0009e4d1... (70 %)
+Writing at 0x000a5361... (73 %)
+Writing at 0x000ac206... (76 %)
+Writing at 0x000b23c6... (80 %)
+Writing at 0x000b870b... (83 %)
+Writing at 0x000bec7a... (86 %)
+Writing at 0x000c50b8... (90 %)
+Writing at 0x000cbe3c... (93 %)
+Writing at 0x000d2aa7... (96 %)
+Writing at 0x000d8b17... (100 %)
+Wrote 849600 bytes (487512 compressed) at 0x00010000 in 3.6 seconds (effective 1898.4 kbit/s)...
 Hash of data verified.
 Compressed 3072 bytes to 103...
 Writing at 0x00008000... (100 %)
-Wrote 3072 bytes (103 compressed) at 0x00008000 in 0.1 seconds (effective 361.1 kbit/s)...
+Wrote 3072 bytes (103 compressed) at 0x00008000 in 0.1 seconds (effective 362.2 kbit/s)...
 Hash of data verified.
 
 Leaving...
