@@ -90,19 +90,6 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	memcpy(ciphertext, message + IV_LENGTH,
 		   CYPHERTEXT_LENGTH); // Extract the ciphertext (remaining 64 bytes)
 
-	// Print the received IV
-	/*ESP_LOGI(TAG, "Received IV: ");
-	for (int i = 0; i < 16; i++) {
-		ESP_LOGI(TAG, "%02X", iv[i]);
-	}
-	ESP_LOGI(TAG, "\n");*/
-
-	// osStatus_t status = osMessageQueuePut(lora_hex_queue_rx, message, 0, 0);
-	// if (status != osOK)
-	//{
-	// printf("Failed to send lora_hex_queue_rx\n");
-	//}
-
 	// Initialize the AES context with the key and received IV.
 	struct AES_ctx ctx;
 	AES_init_ctx_iv(&ctx, encryption_key, iv);
@@ -111,12 +98,6 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	AES_CBC_decrypt_buffer(&ctx, ciphertext, sizeof(ciphertext));
 
 	ciphertext[sizeof(ciphertext) - 1] = '\0'; // Ensure null termination
-
-	// status = osMessageQueuePut(lora_decrypted_queue_rx, ciphertext, 0, 0);
-	// if (status != osOK)
-	//{
-	//	printf("Failed to send lora_decrypted_queue_rx\n");
-	// }
 
 	// "cyphertext" is now decrypted - print
 	ESP_LOGI(TAG, "Decrypted text: %s\n", ciphertext);
@@ -149,6 +130,7 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	        // Loop with specific times
 	        else if (cmd == 1) {
 				char on_arg[LOOP_LEN], off_arg[LOOP_LEN];
+				
 	            if (sscanf(p, "on %3s off %3s", on_arg, off_arg) == 2) {
 					memcpy(relay_tx.loop_on, on_arg, LOOP_LEN);
 					memcpy(relay_tx.loop_off, off_arg, LOOP_LEN);
@@ -160,23 +142,14 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	        }
 	        else {
 	            ESP_LOGW(TAG, "Unknown command %d", cmd);
-	            
-	            // Don't send receipt
-	            valid_data_rec = false;
 	        }
 	    }
 	    else {
 	        ESP_LOGE(TAG, "Failed to parse integer after marker");
-	        
-	        // Don't send receipt
-	        valid_data_rec = false;
 	    }
 	}
 	else {
 	    ESP_LOGI(TAG, "Marker not found");
-	    
-	    // Don't send receipt
-	    valid_data_rec = false;
 	}	
 }
 

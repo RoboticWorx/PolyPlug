@@ -29,7 +29,7 @@ static const char *time_opts[] = {
     "1m",  "3m",  "5m",  "15m",
     "30m", "45m", "1h",  "2h",
     "3h",  "4h",  "6h",  "8h",
-    "12h", "16h", "24h"
+    "12h", "16h", "18h", "24h"
 };
 
 // Allowed times' equivalent delays in ticks
@@ -48,6 +48,7 @@ static const TickType_t time_ticks[] = {
     pdMS_TO_TICKS(8 * 60 * 60 * 1000UL), // 8h
     pdMS_TO_TICKS(12 * 60 * 60 * 1000UL), // 12h
     pdMS_TO_TICKS(16 * 60 * 60 * 1000UL), // 16h
+    pdMS_TO_TICKS(18 * 60 * 60 * 1000UL), // 18h
     pdMS_TO_TICKS(24 * 60 * 60 * 1000UL) // 24h
 };
 
