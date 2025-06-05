@@ -6,6 +6,7 @@
 #include "driver/spi_master.h"
 
 #include "esp_log.h"
+#include "esp_random.h"
 
 #include "gpio_funcs.h"
 #include "gpio_task.h"
@@ -124,4 +125,24 @@ TickType_t gpio_lookup_time_ticks(const char *s)
         }
     }
     return 0; // Invalid: Zero delay
+}
+
+TickType_t gpio_get_random_ticks_from_range(int min_m, int max_m)
+{
+    // Convert minutes to seconds:
+    int min_s = min_m * 60;
+    int max_s = max_m * 60;
+    
+    // If passed in wrong order, swap
+    if (min_s > max_s) {
+		int t = min_s;
+		min_s = max_s;
+		max_s = t; 
+	}
+
+	// Pick a random integer in [min_s .. max_s]
+    int total_seconds = (esp_random() % (max_s - min_s + 1)) + min_s;
+    
+    // Convert from seconds to FreeRTOS ticks
+    return pdMS_TO_TICKS((uint64_t)total_seconds * 1000ULL);
 }

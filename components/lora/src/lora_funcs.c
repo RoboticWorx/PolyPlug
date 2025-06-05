@@ -140,6 +140,30 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 					valid_data_rec = true;
 	            }
 	        }
+	        // Away mode
+	        else if (cmd == 3) {
+				char buf[12];
+				if (sscanf(p, "away %s", buf) == 1) {
+					ESP_LOGI(TAG, "Away mode RX: %s", buf);
+					
+					int away_min = 0, away_max = 0;
+					// Parse to extract min and max range
+					if (sscanf(buf, "%d-%dm", &away_min, &away_max) == 2) {
+					    ESP_LOGI(TAG, "Parsed away range: %d to %d minutes", away_min, away_max);
+					    
+					    // Save and send to 
+					    relay_tx.away_min = away_min;
+					    relay_tx.away_max = away_max;
+					    xQueueSend(xRelayToggleQueue, &relay_tx, 1);
+					    
+						// Send receipt
+						valid_data_rec = true;
+					}
+					else {
+					    ESP_LOGE(TAG, "Failed to parse away range from \"%s\"", buf);
+					}
+	            }
+			}
 	        else {
 	            ESP_LOGW(TAG, "Unknown command %d", cmd);
 	        }

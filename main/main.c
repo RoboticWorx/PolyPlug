@@ -7,6 +7,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
+#include "esp_random.h"
 #include "esp_log.h"
 #include "esp_err.h"
 
@@ -44,6 +45,10 @@ void app_main(void) {
     ESP_ERROR_CHECK(esp_funcs_wifi_driver_init());
     // Turn off radio to save power
     ESP_ERROR_CHECK(esp_funcs_wifi_radio_stop());
+    
+    // Seed random
+	uint32_t seed = (uint32_t)esp_random();
+	srand(seed);
 	
 	// Initialize
 	gpio_spi_init();

@@ -1,4 +1,5 @@
 #include "freertos/FreeRTOS.h"
+
 #include "freertos/task.h"
 
 #include "driver/gpio.h"
@@ -68,6 +69,61 @@ static void gpio_task(void *arg)
 	                    break;
 	                }
 	            }
+			}
+			// Away mode
+			else if (relay_rx.index == 3) {
+			    int min_m = relay_rx.away_min;
+			    int max_m = relay_rx.away_max;
+			    
+			    // Convert to seconds
+			    int min_s = min_m * 60;
+			    int max_s = max_m * 60;
+				
+			    while (1) {			
+					// Generate a random ON duration in range			
+			        TickType_t delay_ticks = gpio_get_random_ticks_from_range(min_m, max_m);
+			        
+			        // For logging
+			        int total_s = (uint32_t)(delay_ticks * portTICK_PERIOD_MS / 1000);
+			        int m = total_s / 60;
+			        int s = total_s % 60;
+			        ESP_LOGI(TAG, "Away ON for %d min %d sec", m, s);
+			        
+			        gpio_set_level(RELAY_PIN, 1);
+			        relay_level = false; // False to toggle from true if toggle cmd sent
+			        
+			        // Wait in ON state unless a new command arrives
+			        if (xQueueReceive(xRelayToggleQueue, &relay_rx, delay_ticks) == pdPASS) {
+			            ESP_LOGI(TAG, "Away mode updated during ON");
+			            
+			            // Re-send data to unlock queue at the top
+			            xQueueSend(xRelayToggleQueue, &relay_rx, 0);
+			            
+			            break;
+			        }
+			
+			        // Generate a random OFF duration in range
+			        delay_ticks = gpio_get_random_ticks_from_range(min_m, max_m);
+			        
+			        // For logging
+			        total_s = (uint32_t)(delay_ticks * portTICK_PERIOD_MS / 1000);
+			        m = total_s / 60;
+			        s = total_s % 60;
+			        ESP_LOGI(TAG, "Away ON for %d min %d sec", m, s);
+			        
+			        gpio_set_level(RELAY_PIN, 0);
+			        relay_level = true; // True to toggle from false if toggle cmd sent
+			        
+			        // Wait in OFF state unless a new command arrives
+			        if (xQueueReceive(xRelayToggleQueue, &relay_rx, delay_ticks) == pdPASS) {
+			            ESP_LOGI(TAG, "Away mode updated during OFF");
+			            
+			            // Re-send data to unlock queue at the top
+			            xQueueSend(xRelayToggleQueue, &relay_rx, 0);
+			            
+			            break;
+			        }
+			    }
 			}
 		}
 			
