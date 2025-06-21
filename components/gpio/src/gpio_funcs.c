@@ -57,25 +57,28 @@ void gpio_init(void)
 {
 	// Configure outputs
 	gpio_config_t io_conf_out = {
-	    .pin_bit_mask = (1ULL << RELAY_PIN), 
-	    .mode           = GPIO_MODE_OUTPUT,
-	    .pull_up_en     = GPIO_PULLUP_DISABLE,
-	    .pull_down_en   = GPIO_PULLDOWN_DISABLE,
-	    .intr_type      = GPIO_INTR_DISABLE
+	    .pin_bit_mask = (1ULL << RELAY_PIN) |
+	    				(1ULL << RGB_RED_PIN) |
+	    				(1ULL << RGB_GREEN_PIN) |
+	    				(1ULL << RGB_BLUE_PIN),
+	    .mode = GPIO_MODE_OUTPUT,
+	    .pull_up_en = GPIO_PULLUP_DISABLE,
+	    .pull_down_en = GPIO_PULLDOWN_DISABLE,
+	    .intr_type = GPIO_INTR_DISABLE
 	};
 	gpio_config(&io_conf_out);
 	
 	gpio_set_level(RELAY_PIN, 0);
 	
 	// Configure inputs
-	/*gpio_config_t io_conf_in = {
-	    .pin_bit_mask = (1ULL << TCA9535_INT_GPIO),
-	    .mode         = GPIO_MODE_INPUT,
-	    .intr_type    = GPIO_INTR_NEGEDGE,
-	    .pull_up_en     = GPIO_PULLUP_DISABLE,
-	    .pull_down_en   = GPIO_PULLDOWN_DISABLE,
+	gpio_config_t io_conf_in = {
+	    .pin_bit_mask = (1ULL << PAIR_BTN1_PIN),
+	    .mode = GPIO_MODE_INPUT,
+	    .intr_type = GPIO_INTR_DISABLE,
+	    .pull_up_en = GPIO_PULLUP_ENABLE,
+	    .pull_down_en = GPIO_PULLDOWN_DISABLE,
 	};
-	gpio_config(&io_conf_in);*/
+	gpio_config(&io_conf_in);
 	
 }
 
@@ -140,7 +143,7 @@ TickType_t gpio_get_random_ticks_from_range(int min_m, int max_m)
 		max_s = t; 
 	}
 
-	// Pick a random integer in [min_s .. max_s]
+	// Pick a random integer in min_s to max_s
     int total_seconds = (esp_random() % (max_s - min_s + 1)) + min_s;
     
     // Convert from seconds to FreeRTOS ticks

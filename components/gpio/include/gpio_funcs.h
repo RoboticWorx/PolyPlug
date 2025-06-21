@@ -4,6 +4,12 @@
 #include "freertos/FreeRTOS.h"
 
 #define RELAY_PIN 26
+#define PAIR_BTN1_PIN 10
+#define PAIR_BTN2_PIN 9
+
+#define RGB_RED_PIN 12
+#define RGB_GREEN_PIN 11
+#define RGB_BLUE_PIN 25
 
 /**
  * @brief Initialize gpio pins

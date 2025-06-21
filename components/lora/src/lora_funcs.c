@@ -19,6 +19,7 @@ static relay_t relay_tx;
 static uint8_t encryption_key[16] = {0};
 
 static bool valid_data_rec = false;
+static uint32_t last_rx_id = 0;
 
 void lora_set_key(const uint8_t *key) {
     memcpy(encryption_key, key, ENC_KEY_LEN);
@@ -102,23 +103,23 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	// "cyphertext" is now decrypted - print
 	ESP_LOGI(TAG, "Decrypted text: %s\n", ciphertext);
 	
-	// Check if contains correct value
-	char *marker = "PolyCast_Command_Value:";
-	char *p = strstr((char*)ciphertext, marker);
-	if (p != NULL) {
-	    int cmd = 0;
-	    // Scan the number right after the marker
-	    int n;
-	    
-	    // Check if format is correct
-	    if (sscanf(p, "PolyCast_Command_Value: %d %n", &cmd, &n) == 1) {
-	        ESP_LOGI(TAG, "Parsed command value: %d", cmd);
+	
+	// Processing logic:
+	uint32_t rx_id;
+	int cmd;
+	char instr_buf[64];
+	
+	// Try to parse ID, cmd, and instr (up to 63 chars) in one go:
+	int got = sscanf((char*)ciphertext, "PolyCast_Command_Value:%" SCNu32 ":%d:%63[^\n]", &rx_id, &cmd, instr_buf);
+	
+	if (got == 3) {
+	    ESP_LOGI(TAG, "Parsed rx_id=%" PRIu32 ", cmd=%d, instr=\"%s\"", rx_id, cmd, instr_buf);
+	
+	    // Check for unique ID
+	    if (rx_id != last_rx_id) {
+	        last_rx_id = rx_id;
 	        
-	        // Assign extracted index to relay struct
 	        relay_tx.index = cmd;
-	        
-	        // Advance by number of chars read so far
-	        p += n;
 	        
 	        // Simple toggle
 	        if (cmd == 0) {
@@ -131,50 +132,48 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	        else if (cmd == 1) {
 				char on_arg[LOOP_LEN], off_arg[LOOP_LEN];
 				
-	            if (sscanf(p, "on %3s off %3s", on_arg, off_arg) == 2) {
-					memcpy(relay_tx.loop_on, on_arg, LOOP_LEN);
-					memcpy(relay_tx.loop_off, off_arg, LOOP_LEN);
-					xQueueSend(xRelayToggleQueue, &relay_tx, 1);
-					
-					// Send receipt
-					valid_data_rec = true;
-	            }
+		        if (sscanf(instr_buf, "on %3s off %3s", on_arg, off_arg) == 2) {
+		            memcpy(relay_tx.loop_on,  on_arg,  LOOP_LEN);
+		            memcpy(relay_tx.loop_off, off_arg, LOOP_LEN);
+		            xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+		            
+		            // Send receipt
+		            valid_data_rec = true;
+		        }
+		        else {
+		            ESP_LOGE(TAG, "Bad loop args: \"%s\"", instr_buf);
+		        }
 	        }
 	        // Away mode
 	        else if (cmd == 3) {
-				char buf[12];
-				if (sscanf(p, "away %s", buf) == 1) {
-					ESP_LOGI(TAG, "Away mode RX: %s", buf);
+				int away_min, away_max;
+				
+		        if (sscanf(instr_buf, "away %d-%dm", &away_min, &away_max) == 2) {
+					ESP_LOGI(TAG, "Parsed away range: %d to %d minutes", away_min, away_max);
 					
-					int away_min = 0, away_max = 0;
-					// Parse to extract min and max range
-					if (sscanf(buf, "%d-%dm", &away_min, &away_max) == 2) {
-					    ESP_LOGI(TAG, "Parsed away range: %d to %d minutes", away_min, away_max);
-					    
-					    // Save and send to 
-					    relay_tx.away_min = away_min;
-					    relay_tx.away_max = away_max;
-					    xQueueSend(xRelayToggleQueue, &relay_tx, 1);
-					    
-						// Send receipt
-						valid_data_rec = true;
-					}
-					else {
-					    ESP_LOGE(TAG, "Failed to parse away range from \"%s\"", buf);
-					}
-	            }
+					// Save and send
+		            relay_tx.away_min = away_min;
+		            relay_tx.away_max = away_max;
+		            xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+		            
+		            // Send receipt
+		            valid_data_rec = true;
+		        }
+		        else {
+		            ESP_LOGE(TAG, "Bad away args: \"%s\"", instr_buf);
+		        }
 			}
 	        else {
 	            ESP_LOGW(TAG, "Unknown command %d", cmd);
 	        }
 	    }
 	    else {
-	        ESP_LOGE(TAG, "Failed to parse integer after marker");
+	        ESP_LOGW(TAG, "Duplicate msg, re-ACK only");
 	    }
 	}
 	else {
-	    ESP_LOGI(TAG, "Marker not found");
-	}	
+	    ESP_LOGE(TAG, "Failed to parse incoming \"%s\"", ciphertext);
+	}
 }
 
 void lora_send_receipt()
@@ -184,7 +183,7 @@ void lora_send_receipt()
 		char payload[CYPHERTEXT_LENGTH] = {0};
 		
 		// Format command into string
-		snprintf(payload, sizeof(payload), "PolyCast_Command_Value_Received");
+		snprintf(payload, sizeof(payload), "PolyCast_Command_Value_Received:%" PRIu32, last_rx_id);
 	
 		ESP_LOGI(TAG, "SENDING: %s", payload);
 	

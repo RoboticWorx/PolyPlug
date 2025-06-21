@@ -109,7 +109,7 @@ static void gpio_task(void *arg)
 			        total_s = (uint32_t)(delay_ticks * portTICK_PERIOD_MS / 1000);
 			        m = total_s / 60;
 			        s = total_s % 60;
-			        ESP_LOGI(TAG, "Away ON for %d min %d sec", m, s);
+			        ESP_LOGI(TAG, "Away OFF for %d min %d sec", m, s);
 			        
 			        gpio_set_level(RELAY_PIN, 0);
 			        relay_level = true; // True to toggle from false if toggle cmd sent
