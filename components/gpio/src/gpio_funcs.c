@@ -149,3 +149,21 @@ TickType_t gpio_get_random_ticks_from_range(int min_m, int max_m)
     // Convert from seconds to FreeRTOS ticks
     return pdMS_TO_TICKS((uint64_t)total_seconds * 1000ULL);
 }
+
+void gpio_relay_on(void)
+{
+	// Relay ON
+	gpio_set_level(RELAY_PIN, 1);
+	
+	// Blue RGB ON
+	gpio_set_level(RGB_BLUE_PIN, 1);
+}
+
+void gpio_relay_off(void)
+{
+	// Relay OFF
+	gpio_set_level(RELAY_PIN, 0);
+	
+	// Blue RGB OFF
+	gpio_set_level(RGB_BLUE_PIN, 0);
+}

@@ -68,7 +68,6 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	// Verify that the message length is at least 16 bytes (for IV) + 16 bytes
 	// (minimum ciphertext)
 	if (message_len < 32) {
-		
 		#ifdef POLYPLUG_DEBUG
 			ESP_LOGI(TAG, "Received message too short!");
 		#endif

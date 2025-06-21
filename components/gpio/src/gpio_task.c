@@ -31,7 +31,13 @@ static void gpio_task(void *arg)
 		// If received queue data (loop command)
 		if (xQueueReceive(xRelayToggleQueue, &relay_rx, 1) == pdPASS) {
 			if (relay_rx.index == 0) {
-				gpio_set_level(RELAY_PIN, relay_level);
+				if (relay_level) {
+					gpio_relay_on();
+				}
+				else {
+					gpio_relay_off();
+				}
+				
     			relay_level = !relay_level;
 			}
 			else if (relay_rx.index == 1) {
@@ -47,7 +53,7 @@ static void gpio_task(void *arg)
 	            while(1) {
 					
 	                // Start ON loop for duration until new data received
-	                gpio_set_level(RELAY_PIN, 1);
+	                gpio_relay_on();
 	                relay_level = false; // False to toggle from true if toggle cmd sent
 	                if (xQueueReceive(xRelayToggleQueue, &relay_rx, on_ticks) == pdPASS) {
 						#ifdef POLYPLUG_DEBUG
@@ -62,7 +68,7 @@ static void gpio_task(void *arg)
 	                }
 	                
 	                // Start OFF loop for duration until new data received
-	                gpio_set_level(RELAY_PIN, 0);
+	                gpio_relay_off();
 	                relay_level = true; // True to toggle from false if toggle cmd sent
 	                if (xQueueReceive(xRelayToggleQueue, &relay_rx, off_ticks) == pdPASS) {
 						#ifdef POLYPLUG_DEBUG
@@ -95,7 +101,7 @@ static void gpio_task(void *arg)
 				        ESP_LOGI(TAG, "Away ON for %d min %d sec", m, s);
 			        #endif
 			        
-			        gpio_set_level(RELAY_PIN, 1);
+			        gpio_relay_on();
 			        relay_level = false; // False to toggle from true if toggle cmd sent
 			        
 			        // Wait in ON state unless a new command arrives
@@ -122,7 +128,7 @@ static void gpio_task(void *arg)
 				        ESP_LOGI(TAG, "Away OFF for %d min %d sec", m, s);
 			        #endif
 			        
-			        gpio_set_level(RELAY_PIN, 0);
+			        gpio_relay_off();
 			        relay_level = true; // True to toggle from false if toggle cmd sent
 			        
 			        // Wait in OFF state unless a new command arrives

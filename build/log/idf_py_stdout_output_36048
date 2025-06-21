@@ -1,0 +1,72 @@
+[1/5] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\ESPL\PolyPlug\build\esp-idf\esptool_py && C:\Espressif\python_env\idf5.4_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.4/components/partition_table/check_sizes.py --offset 0x8000 partition --type app C:/ESPL/PolyPlug/build/partition_table/partition-table.bin C:/ESPL/PolyPlug/build/app-template.bin"
+app-template.bin binary size 0xd03e0 bytes. Smallest app partition is 0x100000 bytes. 0x2fc20 bytes (19%) free.
+[2/5] Performing build step for 'bootloader'
+[1/1] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\ESPL\PolyPlug\build\bootloader\esp-idf\esptool_py && C:\Espressif\python_env\idf5.4_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.4/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x2000 C:/ESPL/PolyPlug/build/bootloader/bootloader.bin"
+Bootloader binary size 0x53e0 bytes. 0xc20 bytes (13%) free.
+[3/5] No install step for 'bootloader'
+[4/5] Completed 'bootloader'
+[4/5] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\Espressif\frameworks\esp-idf-v5.4\components\esptool_py && C:\Espressif\tools\cmake\3.30.2\bin\cmake.exe -D IDF_PATH=C:/Espressif/frameworks/esp-idf-v5.4 -D SERIAL_TOOL=C:/Espressif/python_env/idf5.4_py3.11_env/Scripts/python.exe;;C:/Espressif/frameworks/esp-idf-v5.4/components/esptool_py/esptool/esptool.py;--chip;esp32c5 -D SERIAL_TOOL_ARGS=--before=default_reset;--after=hard_reset;write_flash;@flash_args -D WORKING_DIRECTORY=C:/ESPL/PolyPlug/build -P C:/Espressif/frameworks/esp-idf-v5.4/components/esptool_py/run_serial_tool.cmake"
+esptool.py --chip esp32c5 -p COM14 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 80m --flash_size 2MB 0x2000 bootloader/bootloader.bin 0x10000 app-template.bin 0x8000 partition_table/partition-table.bin
+esptool.py v4.8.1
+Serial port COM14
+Connecting...
+WARNING: This chip doesn't appear to be a ESP32-C5 (chip magic value 0x63e1406f). Probably it is unsupported by this version of esptool.
+Chip is ESP32-C5 (revision v0.1)
+Features: WiFi 6, BT 5, IEEE802.15.4
+Crystal is 48MHz
+MAC: 60:55:f9:ff:fe:fc:df:30
+BASE MAC: 60:55:f9:fc:df:30
+MAC_EXT: ff:fe
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 460800
+Changed.
+Configuring flash size...
+Flash will be erased from 0x00002000 to 0x00007fff...
+Flash will be erased from 0x00010000 to 0x000e0fff...
+Flash will be erased from 0x00008000 to 0x00008fff...
+Compressed 21472 bytes to 13117...
+Writing at 0x00002000... (100 %)
+Wrote 21472 bytes (13117 compressed) at 0x00002000 in 0.2 seconds (effective 814.1 kbit/s)...
+Hash of data verified.
+Compressed 852960 bytes to 488645...
+Writing at 0x00010000... (3 %)
+Writing at 0x0001c435... (6 %)
+Writing at 0x0002586e... (10 %)
+Writing at 0x0002f541... (13 %)
+Writing at 0x0003634e... (16 %)
+Writing at 0x0003dea8... (20 %)
+Writing at 0x00045c6e... (23 %)
+Writing at 0x0004cb73... (26 %)
+Writing at 0x00053114... (30 %)
+Writing at 0x00059990... (33 %)
+Writing at 0x000609d5... (36 %)
+Writing at 0x000666ca... (40 %)
+Writing at 0x0006c4f4... (43 %)
+Writing at 0x0007232e... (46 %)
+Writing at 0x0007848a... (50 %)
+Writing at 0x0007ede2... (53 %)
+Writing at 0x00084c2f... (56 %)
+Writing at 0x0008ab2a... (60 %)
+Writing at 0x00090f66... (63 %)
+Writing at 0x000979f9... (66 %)
+Writing at 0x0009ead7... (70 %)
+Writing at 0x000a5827... (73 %)
+Writing at 0x000ac7ab... (76 %)
+Writing at 0x000b29d2... (80 %)
+Writing at 0x000b8d7a... (83 %)
+Writing at 0x000bf2ec... (86 %)
+Writing at 0x000c56b4... (90 %)
+Writing at 0x000cc448... (93 %)
+Writing at 0x000d2d45... (96 %)
+Writing at 0x000d9092... (100 %)
+Wrote 852960 bytes (488645 compressed) at 0x00010000 in 3.3 seconds (effective 2057.2 kbit/s)...
+Hash of data verified.
+Compressed 3072 bytes to 103...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (103 compressed) at 0x00008000 in 0.1 seconds (effective 361.4 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...

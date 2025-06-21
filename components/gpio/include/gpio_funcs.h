@@ -24,4 +24,7 @@ TickType_t gpio_lookup_time_ticks(const char *s);
 
 TickType_t gpio_get_random_ticks_from_range(int min_m, int max_m);
 
+void gpio_relay_on(void);
+void gpio_relay_off(void);
+
 #endif // GPIO_FUNCS_H
