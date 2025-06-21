@@ -169,6 +169,13 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	    }
 	    else {
 	        ESP_LOGW(TAG, "Duplicate msg, re-ACK only");
+	        
+	        // Still send receipt, but don't re-execute.
+		    // This is for case when cmd was received but receipt was lost.
+		    // This prevents the sender from thinking it wasn't received and re-sending to un-do what the first send did.
+	        
+	        // Send receipt
+		    valid_data_rec = true;
 	    }
 	}
 	else {
