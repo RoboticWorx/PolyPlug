@@ -1,9 +1,9 @@
-#include "freertos/FreeRTOS.h"
+#include "polyplug_macros.h"
 
+#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "driver/gpio.h"
-
 #include "esp_log.h"
 
 #include "gpio_funcs.h"
@@ -24,6 +24,7 @@ static void gpio_task(void *arg)
 	if (xRelayToggleQueue == NULL) {
 		ESP_LOGE(TAG, "Failed to create xRelayToggleQueue");
 	}
+	configASSERT(xRelayToggleQueue);
 	
 	while (1) 
 	{
@@ -34,7 +35,9 @@ static void gpio_task(void *arg)
     			relay_level = !relay_level;
 			}
 			else if (relay_rx.index == 1) {
-				ESP_LOGI(TAG, "RECEIVED: on=%s, off=%s", relay_rx.loop_on, relay_rx.loop_off);
+				#ifdef POLYPLUG_DEBUG
+					ESP_LOGI(TAG, "RECEIVED: on=%s, off=%s", relay_rx.loop_on, relay_rx.loop_off);
+				#endif
 
 	            // Turn received time on/off into ticks
 	            TickType_t on_ticks = gpio_lookup_time_ticks(relay_rx.loop_on);
@@ -47,8 +50,10 @@ static void gpio_task(void *arg)
 	                gpio_set_level(RELAY_PIN, 1);
 	                relay_level = false; // False to toggle from true if toggle cmd sent
 	                if (xQueueReceive(xRelayToggleQueue, &relay_rx, on_ticks) == pdPASS) {
-	                    ESP_LOGI(TAG, "Pattern updated during ON: index=%d on=%s off=%s",
-							relay_rx.index, relay_rx.loop_on, relay_rx.loop_off);
+						#ifdef POLYPLUG_DEBUG
+		                    ESP_LOGI(TAG, "Pattern updated during ON: index=%d on=%s off=%s",
+								relay_rx.index, relay_rx.loop_on, relay_rx.loop_off);
+						#endif
 							
 						// Re-send data to unlock queue at the top
 						xQueueSend(xRelayToggleQueue, &relay_rx, 1);
@@ -60,8 +65,10 @@ static void gpio_task(void *arg)
 	                gpio_set_level(RELAY_PIN, 0);
 	                relay_level = true; // True to toggle from false if toggle cmd sent
 	                if (xQueueReceive(xRelayToggleQueue, &relay_rx, off_ticks) == pdPASS) {
-						ESP_LOGI(TAG, "Pattern updated during OFF: index=%d on=%s off=%s",
-							relay_rx.index, relay_rx.loop_on, relay_rx.loop_off);
+						#ifdef POLYPLUG_DEBUG
+							ESP_LOGI(TAG, "Pattern updated during OFF: index=%d on=%s off=%s",
+								relay_rx.index, relay_rx.loop_on, relay_rx.loop_off);
+						#endif
 						
 						// Re-send data to unlock queue at the top
 						xQueueSend(xRelayToggleQueue, &relay_rx, 1);
@@ -74,10 +81,6 @@ static void gpio_task(void *arg)
 			else if (relay_rx.index == 3) {
 			    int min_m = relay_rx.away_min;
 			    int max_m = relay_rx.away_max;
-			    
-			    // Convert to seconds
-			    int min_s = min_m * 60;
-			    int max_s = max_m * 60;
 				
 			    while (1) {			
 					// Generate a random ON duration in range			
@@ -87,14 +90,19 @@ static void gpio_task(void *arg)
 			        int total_s = (uint32_t)(delay_ticks * portTICK_PERIOD_MS / 1000);
 			        int m = total_s / 60;
 			        int s = total_s % 60;
-			        ESP_LOGI(TAG, "Away ON for %d min %d sec", m, s);
+			        
+			        #ifdef POLYPLUG_DEBUG
+				        ESP_LOGI(TAG, "Away ON for %d min %d sec", m, s);
+			        #endif
 			        
 			        gpio_set_level(RELAY_PIN, 1);
 			        relay_level = false; // False to toggle from true if toggle cmd sent
 			        
 			        // Wait in ON state unless a new command arrives
 			        if (xQueueReceive(xRelayToggleQueue, &relay_rx, delay_ticks) == pdPASS) {
-			            ESP_LOGI(TAG, "Away mode updated during ON");
+						#ifdef POLYPLUG_DEBUG
+				            ESP_LOGI(TAG, "Away mode updated during ON");
+			            #endif
 			            
 			            // Re-send data to unlock queue at the top
 			            xQueueSend(xRelayToggleQueue, &relay_rx, 0);
@@ -109,14 +117,19 @@ static void gpio_task(void *arg)
 			        total_s = (uint32_t)(delay_ticks * portTICK_PERIOD_MS / 1000);
 			        m = total_s / 60;
 			        s = total_s % 60;
-			        ESP_LOGI(TAG, "Away OFF for %d min %d sec", m, s);
+			        
+			        #ifdef POLYPLUG_DEBUG
+				        ESP_LOGI(TAG, "Away OFF for %d min %d sec", m, s);
+			        #endif
 			        
 			        gpio_set_level(RELAY_PIN, 0);
 			        relay_level = true; // True to toggle from false if toggle cmd sent
 			        
 			        // Wait in OFF state unless a new command arrives
 			        if (xQueueReceive(xRelayToggleQueue, &relay_rx, delay_ticks) == pdPASS) {
-			            ESP_LOGI(TAG, "Away mode updated during OFF");
+						#ifdef POLYPLUG_DEBUG
+				            ESP_LOGI(TAG, "Away mode updated during OFF");
+			            #endif
 			            
 			            // Re-send data to unlock queue at the top
 			            xQueueSend(xRelayToggleQueue, &relay_rx, 0);
@@ -133,6 +146,7 @@ static void gpio_task(void *arg)
 
 void gpio_task_create(void)
 {
-	xTaskCreate(gpio_task, "gpio_task", 4096, NULL, tskIDLE_PRIORITY + 1,
-				NULL);
+	if (xTaskCreate(gpio_task, "gpio_task", 1024 * 2, NULL, tskIDLE_PRIORITY + 1, NULL) != pdPASS) {
+		ESP_LOGE(TAG, "Failed to create gpio_task");
+	}
 }

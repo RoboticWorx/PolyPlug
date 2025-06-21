@@ -1,14 +1,13 @@
+#include "polyplug_macros.h"
+
 #include <string.h>
 
 #include "esp_log.h"
 
+#include "sx126x_hal.h"
 #include "lora_funcs.h"
 #include "lora_task.h"
-
-#include "sx126x_hal.h"
-
 #include "espnow_task.h"
-
 #include "gpio_funcs.h"
 #include "gpio_task.h"
 
@@ -33,20 +32,15 @@ static void generate_random_iv(uint8_t *iv, size_t length) {
 
 void lora_set_rx_mode(void) // Call once to set RX mode and receive on EXTI8
 {
-
 	while (gpio_get_level(SX126X_BUSY_PIN) == 1) {
 		vTaskDelay(pdMS_TO_TICKS(1)); // Poll for SX1262 to be ready
 	}
 
-	// gpio_set_level(SX126X_DIO2_PIN, 1);
-
 	// Enter continuous RX mode
-	sx126x_status_t status = sx126x_set_rx(
-		NULL,
-		SX126X_RX_SINGLE_MODE); // sx126x_set_rx_with_timeout_in_rtc_step(NULL,
-								// SX126X_RX_SINGLE_MODE);
+	sx126x_status_t status = sx126x_set_rx(NULL, SX126X_RX_SINGLE_MODE);
+
 	if (status != SX126X_STATUS_OK) {
-		printf("Failed to enter continuous RX mode\n");
+		ESP_LOGE(TAG, "Failed to enter continuous RX mode\n");
 		return;
 	}
 }
@@ -59,14 +53,14 @@ void lora_tx(uint8_t tx_data[], uint8_t data_len) {
 
 	sx126x_status_t status = sx126x_write_buffer(NULL, 0, tx_data, data_len);
 	if (status != SX126X_STATUS_OK) {
-		printf("Failed to write to buffer\n");
+		ESP_LOGE(TAG, "Failed to write to buffer\n");
 	}
 
 	// Start transmission
 	status = sx126x_set_tx(NULL, SX126X_MAX_TIMEOUT_IN_MS);
 
 	if (status != SX126X_STATUS_OK) {
-		printf("Failed to start transmission\n");
+		ESP_LOGE(TAG, "Failed to start transmission\n");
 	}
 }
 
@@ -74,13 +68,20 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	// Verify that the message length is at least 16 bytes (for IV) + 16 bytes
 	// (minimum ciphertext)
 	if (message_len < 32) {
-		printf("Received message too short!\n");
+		
+		#ifdef POLYPLUG_DEBUG
+			ESP_LOGI(TAG, "Received message too short!");
+		#endif
+		
 		return;
 	}
 
 	// The expected message length is 80 bytes (16 IV + 64 cyphertext)
 	if (message_len != CYPHERTEXT_LENGTH + 16) {
-		printf("Unexpected message length: %u bytes\n", (unsigned)message_len);
+		#ifdef POLYPLUG_DEBUG
+			ESP_LOGI(TAG, "Unexpected message length: %u bytes\n", (unsigned)message_len);
+		#endif
+		
 		return;
 	}
 
@@ -101,9 +102,10 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	ciphertext[sizeof(ciphertext) - 1] = '\0'; // Ensure null termination
 
 	// "cyphertext" is now decrypted - print
-	ESP_LOGI(TAG, "Decrypted text: %s\n", ciphertext);
-	
-	
+	#ifdef POLYPLUG_DEBUG
+		ESP_LOGI(TAG, "Decrypted text: %s\n", ciphertext);
+	#endif
+		
 	// Processing logic:
 	uint32_t rx_id;
 	int cmd;
@@ -113,8 +115,10 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	int got = sscanf((char*)ciphertext, "PolyCast_Command_Value:%" SCNu32 ":%d:%63[^\n]", &rx_id, &cmd, instr_buf);
 	
 	if (got == 3) {
-	    ESP_LOGI(TAG, "Parsed rx_id=%" PRIu32 ", cmd=%d, instr=\"%s\"", rx_id, cmd, instr_buf);
-	
+		#ifdef POLYPLUG_DEBUG
+			ESP_LOGI(TAG, "Parsed rx_id=%" PRIu32 ", cmd=%d, instr=\"%s\"", rx_id, cmd, instr_buf);
+		#endif
+	    
 	    // Check for unique ID
 	    if (rx_id != last_rx_id) {
 	        last_rx_id = rx_id;
@@ -149,7 +153,9 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 				int away_min, away_max;
 				
 		        if (sscanf(instr_buf, "away %d-%dm", &away_min, &away_max) == 2) {
-					ESP_LOGI(TAG, "Parsed away range: %d to %d minutes", away_min, away_max);
+					#ifdef POLYPLUG_DEBUG
+						ESP_LOGI(TAG, "Parsed away range: %d to %d minutes", away_min, away_max);
+					#endif
 					
 					// Save and send
 		            relay_tx.away_min = away_min;
@@ -164,11 +170,15 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 		        }
 			}
 	        else {
-	            ESP_LOGW(TAG, "Unknown command %d", cmd);
+				#ifdef POLYPLUG_DEBUG
+					ESP_LOGW(TAG, "Unknown command %d", cmd);
+				#endif
 	        }
 	    }
 	    else {
-	        ESP_LOGW(TAG, "Duplicate msg, re-ACK only");
+			#ifdef POLYPLUG_DEBUG
+				ESP_LOGW(TAG, "Duplicate msg, re-ACK only");
+			#endif
 	        
 	        // Still send receipt, but don't re-execute.
 		    // This is for case when cmd was received but receipt was lost.
@@ -179,7 +189,9 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	    }
 	}
 	else {
-	    ESP_LOGE(TAG, "Failed to parse incoming \"%s\"", ciphertext);
+		#ifdef POLYPLUG_DEBUG
+			ESP_LOGE(TAG, "Failed to parse incoming \"%s\"", ciphertext);
+		#endif
 	}
 }
 
@@ -192,7 +204,9 @@ void lora_send_receipt()
 		// Format command into string
 		snprintf(payload, sizeof(payload), "PolyCast_Command_Value_Received:%" PRIu32, last_rx_id);
 	
-		ESP_LOGI(TAG, "SENDING: %s", payload);
+		#ifdef POLYPLUG_DEBUG
+			ESP_LOGI(TAG, "SENDING: %s", payload);
+		#endif
 	
 		// Encrypt and send over
 		lora_encrypt_and_transmit((uint8_t *)payload);
@@ -205,8 +219,8 @@ void lora_send_receipt()
 	}
 }
 
-void lora_encrypt_and_transmit(uint8_t plaintext[]) {
-
+void lora_encrypt_and_transmit(uint8_t plaintext[])
+{
 	uint8_t buffer[CYPHERTEXT_LENGTH]; // Padded to 64 bytes (must be multiple
 									   // of 16)
 	memcpy(buffer, plaintext, sizeof(buffer)); // Copy the 64 bytes into buffer
@@ -214,35 +228,27 @@ void lora_encrypt_and_transmit(uint8_t plaintext[]) {
 	uint8_t iv[IV_LENGTH];				// To hold IV
 	generate_random_iv(iv, sizeof(iv)); // Generate random IV into iv[16]
 
-	/*printf("Generated IV: ");
+	/*ESP_LOGI(TAG, "Generated IV: ");
 	for (int i = 0; i < 16; i++) {
-		printf("%02X ", iv[i]);
+		ESP_LOGI(TAG, "%02X ", iv[i]);
 	}
-	printf("\n");*/
+	ESP_LOGI(TAG, "\n");*/
 
 	struct AES_ctx ctx;
-	AES_init_ctx_iv(&ctx, encryption_key,
-					iv); // Initialize AES context with key and IV
+	AES_init_ctx_iv(&ctx, encryption_key, iv); // Initialize AES context with key and IV
 
 	AES_CBC_encrypt_buffer(&ctx, buffer, sizeof(buffer)); // Encrypt buffer
 
 	uint8_t message[IV_LENGTH + CYPHERTEXT_LENGTH]; // New buffer to send
-	memcpy(message, iv, IV_LENGTH);					// First 16 bytes are IV
-	memcpy(message + IV_LENGTH, buffer,
-		   CYPHERTEXT_LENGTH); // Next are the cyphertext
+	memcpy(message, iv, IV_LENGTH); // First 16 bytes are IV
+	memcpy(message + IV_LENGTH, buffer, CYPHERTEXT_LENGTH); // Next are the cyphertext
 
-	/*printf("Message to send (hex): ");
+	/*ESP_LOGI(TAG, "Message to send (hex): ");
 	for (int i = 0; i < (int)sizeof(message); i++)
 	{
-		printf("%02X ", message[i]);
+		ESP_LOGI(TAG, "%02X ", message[i]);
 	}
-	printf("\n");*/
-
-	// osStatus_t status = osMessageQueuePut(lora_hex_queue_tx, message, 0, 0);
-	// if (status != osOK)
-	//{
-	//	printf("Failed to send data to lora_hex_queue_tx\n");
-	// }
+	ESP_LOGI(TAG, "\n");*/
 
 	lora_tx(message, sizeof(message)); // Send the data
 }

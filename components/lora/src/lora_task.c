@@ -1,13 +1,15 @@
-#include "lora_task.h"
-#include "lora_funcs.h"
-#include "sx126x.h"
-
-#include "esp_log.h"
-#include "espnow_task.h"
+#include "polyplug_macros.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+
+#include "esp_log.h"
+#include "espnow_task.h"
+
+#include "sx126x.h"
+#include "lora_task.h"
+#include "lora_funcs.h"
 
 static const char *TAG = "LORA_TASK";
 
@@ -24,7 +26,6 @@ static void IRAM_ATTR dio1_isr_handler(void *arg) {
 
 	// Signal the event handler task
 	xSemaphoreGiveFromISR(xLoraEventSemaphore, &xHigherPriorityTaskWoken);
-
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
@@ -35,25 +36,26 @@ static void lora_task(void *pvParameters) {
 	xLoraEventSemaphore = xSemaphoreCreateBinary();
 	if (xLoraEventSemaphore == NULL) {
 		ESP_LOGE(TAG, "Failed to create LoRa event semaphore");
-		vTaskDelete(NULL);
 	}
+	configASSERT(xLoraEventSemaphore);
 
 	xTXDoneSemaphore = xSemaphoreCreateBinary();
 	if (xTXDoneSemaphore == NULL) {
 		ESP_LOGE(TAG, "Failed to create TX_DONE semaphore");
-		vTaskDelete(NULL);
 	}
+	configASSERT(xTXDoneSemaphore);
 
 	// Create the LoRa event handler task
-	xTaskCreate(lora_event_handler_task, "lora_event_handler", 4096, NULL, 6,
-				NULL);
+	
+	if (xTaskCreate(lora_event_handler_task, "lora_event_handler", 1024 * 3, NULL, tskIDLE_PRIORITY + 3, NULL) != pdPASS) {
+		ESP_LOGE(TAG, "Failed to create lora_event_handler_task");
+	}
 
 	sx126x_mod_params_lora_t lora_mod_params = {
-		.sf = SX126X_LORA_SF7, // Spreading factor (higher value sends further
-							   // but takes more time)
+		.sf = SX126X_LORA_SF7, // Spreading factor (higher value sends further but takes more time)
 		.bw = SX126X_LORA_BW_125, // Bandwidth
 		.cr = SX126X_LORA_CR_4_5, // Error correction
-		.ldro = 0,				  // 1 if SF > 10
+		.ldro = 0, // 1 if SF > 10
 	};
 
 	sx126x_pkt_params_lora_t lora_pkt_params = {
@@ -67,9 +69,9 @@ static void lora_task(void *pvParameters) {
 	// Define the PA configuration parameters
 	sx126x_pa_cfg_params_t pa_config = {
 		.pa_duty_cycle = 0x04, // Duty cycle setting
-		.hp_max = 0x07,		   // Maximum output power
-		.device_sel = 0x00,	   // Select SX1262-specific PA configuration
-		.pa_lut = 0x01		   // Default LUT (Look-Up Table)
+		.hp_max = 0x07, // Maximum output power
+		.device_sel = 0x00, // Select SX1262-specific PA configuration
+		.pa_lut = 0x01 // Default LUT (Look-Up Table)
 	};
 
 	sx126x_hal_reset(NULL);
@@ -146,13 +148,11 @@ static void lora_task(void *pvParameters) {
 	}
 
 	status = sx126x_set_dio_irq_params(
-		NULL,
-		SX126X_IRQ_ALL, // Enable all IRQs
-		SX126X_IRQ_TX_DONE | SX126X_IRQ_RX_DONE | SX126X_IRQ_TIMEOUT |
-			SX126X_IRQ_HEADER_ERROR |
-			SX126X_IRQ_CRC_ERROR, // Enable IRQ finished
-		SX126X_IRQ_NONE,		  // No IRQs mapped to DIO2
-		SX126X_IRQ_NONE			  // No IRQs mapped to DIO3
+		  NULL,
+		 SX126X_IRQ_ALL, // Enable all IRQs
+		SX126X_IRQ_TX_DONE | SX126X_IRQ_RX_DONE | SX126X_IRQ_TIMEOUT | SX126X_IRQ_HEADER_ERROR | SX126X_IRQ_CRC_ERROR, // Enable IRQ finished
+		SX126X_IRQ_NONE, // No IRQs mapped to DIO2
+		SX126X_IRQ_NONE // No IRQs mapped to DIO3
 	);
 	if (status != SX126X_STATUS_OK) {
 		ESP_LOGE(TAG, "Failed to set DIO IRQ parameters");
@@ -173,7 +173,6 @@ static void lora_task(void *pvParameters) {
 	gpio_isr_handler_add(SX126X_DIO1_PIN, dio1_isr_handler, NULL);
 	
 	lora_set_rx_mode(); // Listen for receipt from receiver
-
 	
 	for (;;) {
 		
@@ -197,7 +196,9 @@ static void lora_event_handler_task(void *pvParameters) {
 
 			// If transmission complete
 			if (irq_flags & SX126X_IRQ_TX_DONE) {
-				ESP_LOGI(TAG, "Transmission completed");
+				#ifdef POLYPLUG_DEBUG
+					ESP_LOGI(TAG, "Transmission completed");
+				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_TX_DONE);
 				lora_set_rx_mode(); // Prepare to receive next transmission
 			}
@@ -220,7 +221,9 @@ static void lora_event_handler_task(void *pvParameters) {
 				sx126x_read_buffer(NULL, rx_status.buffer_start_pointer,
 								   rx_buffer, rx_size);
 
-				ESP_LOGI(TAG, "Received packet of size %d", rx_size);
+				#ifdef POLYPLUG_DEBUG
+					ESP_LOGI(TAG, "Received packet of size %d", rx_size);
+				#endif
 
 				// Process received
 				lora_process_received_message(rx_buffer, rx_size);
@@ -228,13 +231,17 @@ static void lora_event_handler_task(void *pvParameters) {
 				// Log RSSI
 				sx126x_pkt_status_lora_t pkt_status;
 			    if (sx126x_get_lora_pkt_status(NULL, &pkt_status) == SX126X_STATUS_OK) {
-			        ESP_LOGI(TAG, "Packet RSSI: %d dBm, SignalRSSI: %d dBm, SNR: %d dB",
-			                 pkt_status.rssi_pkt_in_dbm,
-			                 pkt_status.signal_rssi_pkt_in_dbm,
-			                 pkt_status.snr_pkt_in_db);
+					#ifdef POLYPLUG_DEBUG
+				        ESP_LOGI(TAG, "Packet RSSI: %d dBm, SignalRSSI: %d dBm, SNR: %d dB",
+				                 pkt_status.rssi_pkt_in_dbm,
+				                 pkt_status.signal_rssi_pkt_in_dbm,
+				                 pkt_status.snr_pkt_in_db);
+			        #endif
 			    }
 			    else {
-			        ESP_LOGW(TAG, "Failed to get packet status");
+					#ifdef POLYPLUG_DEBUG
+			        	ESP_LOGW(TAG, "Failed to get packet status");
+			        #endif
 			    }
 
 				// Clear IRQ
@@ -246,19 +253,25 @@ static void lora_event_handler_task(void *pvParameters) {
 			}
 
 			if (irq_flags & SX126X_IRQ_TIMEOUT) {
-				ESP_LOGW(TAG, "RX timeout occurred");
+				#ifdef POLYPLUG_DEBUG
+					ESP_LOGW(TAG, "RX timeout occurred");
+				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_TIMEOUT);
 				lora_set_rx_mode(); // Reset RX
 			}
 
 			if (irq_flags & SX126X_IRQ_HEADER_ERROR) {
-				ESP_LOGE(TAG, "Header error in received packet");
+				#ifdef POLYPLUG_DEBUG
+					ESP_LOGE(TAG, "Header error in received packet");
+				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_HEADER_ERROR);
 				lora_set_rx_mode(); // Reset RX
 			}
 
 			if (irq_flags & SX126X_IRQ_CRC_ERROR) {
-				ESP_LOGE(TAG, "CRC error in received packet");
+				#ifdef POLYPLUG_DEBUG
+					ESP_LOGE(TAG, "CRC error in received packet");
+				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_CRC_ERROR);
 				lora_set_rx_mode(); // Reset RX
 			}
@@ -269,5 +282,7 @@ static void lora_event_handler_task(void *pvParameters) {
 // Function to create the LoRa task
 void lora_task_create(void) {
 	// Create the LoRa task
-	xTaskCreate(lora_task, "lora_task", 4096, NULL, 5, NULL);
+	if (xTaskCreate(lora_task, "lora_task", 1024 * 2, NULL, tskIDLE_PRIORITY + 1, NULL) != pdPASS) {
+		ESP_LOGE(TAG, "Failed to create lora_task");
+	}
 }
