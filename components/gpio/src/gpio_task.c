@@ -1,3 +1,4 @@
+#include "freertos/projdefs.h"
 #include "polyplug_macros.h"
 
 #include "freertos/FreeRTOS.h"
@@ -48,6 +49,11 @@ static void gpio_task(void *arg)
 	            // Turn received time on/off into ticks
 	            TickType_t on_ticks = gpio_lookup_time_ticks(relay_rx.loop_on);
 	            TickType_t off_ticks = gpio_lookup_time_ticks(relay_rx.loop_off);
+	            
+	            #ifdef POLYPLUG_DEBUG
+					ESP_LOGI(TAG, "TICKS: on=%" PRIu32 ", off=%" PRIu32, on_ticks, off_ticks);
+					ESP_LOGI(TAG, "MIN: on=%" PRIu32 ", off=%" PRIu32, (pdTICKS_TO_MS(on_ticks) / (1000 * 60)), (pdTICKS_TO_MS(off_ticks) / (1000 * 60)));
+				#endif
 	
 	            // Loop until new data arrives
 	            while(1) {

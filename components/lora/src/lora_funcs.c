@@ -136,8 +136,11 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 				char on_arg[LOOP_LEN], off_arg[LOOP_LEN];
 				
 		        if (sscanf(instr_buf, "on %3s off %3s", on_arg, off_arg) == 2) {
-		            memcpy(relay_tx.loop_on,  on_arg,  LOOP_LEN);
-		            memcpy(relay_tx.loop_off, off_arg, LOOP_LEN);
+					memset(relay_tx.loop_on,  0, LOOP_LEN);
+					memset(relay_tx.loop_off, 0, LOOP_LEN);
+					strncpy(relay_tx.loop_on,  on_arg,  LOOP_LEN - 1);
+					strncpy(relay_tx.loop_off, off_arg, LOOP_LEN - 1);
+
 		            xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
 		            
 		            // Send receipt

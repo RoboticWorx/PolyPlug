@@ -34,27 +34,33 @@ static const char *time_opts[] = {
 };
 
 // Allowed times' equivalent delays in ticks
+// Need to use division since pdMS_TO_TICKS macro truncates to uint32_t
 static const TickType_t time_ticks[] = {
-    pdMS_TO_TICKS(1 * 60 * 1000UL), //  1m
-    pdMS_TO_TICKS(3 * 60 * 1000UL), //  3m
-    pdMS_TO_TICKS(5 * 60 * 1000UL), //  5m
-    pdMS_TO_TICKS(15 * 60 * 1000UL), // 15m
-    pdMS_TO_TICKS(30 * 60 * 1000UL), // 30m
-    pdMS_TO_TICKS(45 * 60 * 1000UL), // 45m
-    pdMS_TO_TICKS(1 * 60 * 60 * 1000UL), // 1h
-    pdMS_TO_TICKS(2 * 60 * 60 * 1000UL), // 2h
-    pdMS_TO_TICKS(3 * 60 * 60 * 1000UL), // 3h
-    pdMS_TO_TICKS(4 * 60 * 60 * 1000UL), // 4h
-    pdMS_TO_TICKS(6 * 60 * 60 * 1000UL), // 6h
-    pdMS_TO_TICKS(8 * 60 * 60 * 1000UL), // 8h
-    pdMS_TO_TICKS(12 * 60 * 60 * 1000UL), // 12h
-    pdMS_TO_TICKS(16 * 60 * 60 * 1000UL), // 16h
-    pdMS_TO_TICKS(18 * 60 * 60 * 1000UL), // 18h
-    pdMS_TO_TICKS(24 * 60 * 60 * 1000UL) // 24h
+    ( 1ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, //  1 m
+    ( 3ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, //  3 m
+    ( 5ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, //  5 m
+    (15ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 15 m
+    (30ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 30 m
+    (45ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 45 m
+    ( 1ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 1 h
+    ( 2ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 2 h
+    ( 3ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 3 h
+    ( 4ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 4 h
+   ( 6ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 6 h
+   ( 8ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 8 h
+   (12ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 12 h
+   (16ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 16 h
+   (18ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 18 h
+   (24ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS  // 24 h
 };
 
 void gpio_init(void)
 {
+	// Config tick rate check
+	if (time_ticks[14] != 6480000) {
+		ESP_LOGE(TAG, "18 h constant is wrong - overflow likely! Got: %" PRIu32, time_ticks[14]);
+	}
+	
 	// Configure outputs
 	gpio_config_t io_conf_out = {
 	    .pin_bit_mask = (1ULL << RELAY_PIN) |
