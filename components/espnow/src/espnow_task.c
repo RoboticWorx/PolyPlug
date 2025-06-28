@@ -46,7 +46,7 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 	    #endif
 	    
 	    // Save received key to flash
-	    espnow_funcs_lora_key_nvs_save(received_enc_key, LORA_ENC_NS, LORA_ENC_FMT);
+	    espnow_funcs_lora_key_nvs_save(received_enc_key);
 	    
 	    listen_triggered = true;
 	    toggle_rx = !toggle_rx;
@@ -92,7 +92,7 @@ static void espnow_task(void *param)
 	}
 	configASSERT(xEspReceivedEncKeyQueue);
 	
-	esp_err_t err = espnow_funcs_lora_key_nvs_load(received_enc_key, LORA_ENC_NS, LORA_ENC_FMT);
+	esp_err_t err = espnow_funcs_lora_key_nvs_load(received_enc_key);
 	if (err == ESP_OK) {
 	    // If key existed, send
 	    xQueueSend(xEspReceivedEncKeyQueue, received_enc_key, portMAX_DELAY);
@@ -103,9 +103,9 @@ static void espnow_task(void *param)
 		// If ESPNOW pair button pressed
 		if (gpio_get_level(PAIR_BTN1_PIN) == 0) {
 			if (toggle_rx) {
-				wifi_funcs_wifi_disconnect();
+				wifi_funcs_wifi_disconnect(); // Disconnect Wi-Fi if connected
 				
-				// Initialize ESP-NOW
+				// Initialize ESP-NOW on listening channel
 				ESP_ERROR_CHECK(esp_wifi_set_channel(WIFI_CHANNEL, 0) );
 				ESP_ERROR_CHECK(esp_now_init());
 				
@@ -116,11 +116,11 @@ static void espnow_task(void *param)
 			}
 			else {
 				// De-initialize ESP-NOW
-			    ESP_ERROR_CHECK(espnow_funcs_espnow_deinit());
+			    ESP_ERROR_CHECK(esp_now_deinit());
 			    
 			    gpio_rgb_ready_to_rx(false); // Back out RGB
 			    
-			    // Try to reconnect to Wi-Fi
+			    // Try to reconnect to Wi-Fi with previously saved network
 			    xSemaphoreGive(xWifiReconnectSemaphore);
 			}
 			
@@ -128,19 +128,17 @@ static void espnow_task(void *param)
 			
 			vTaskDelay(pdMS_TO_TICKS(250)); // Ignore bounce
 		}
-		
-		
-		
+				
 		if (listen_triggered) {
-			// Stop radio and de-initialize ESP-NOW
-		    ESP_ERROR_CHECK(espnow_funcs_espnow_deinit());
+			// De-initialize ESP-NOW
+		    ESP_ERROR_CHECK(esp_now_deinit());
 		    
 		    gpio_rgb_ready_to_rx(false); // Tell RGB we received
 		    
 		    listen_triggered = false;
 		}
     
-		vTaskDelay(pdMS_TO_TICKS(100));
+		vTaskDelay(pdMS_TO_TICKS(10));
 	}
 }
 

@@ -114,8 +114,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t base, int32_t id, voi
         #endif
         
         connected_to_network = false;
-                
-        gpio_rgb_wifi_status(false);
+        
+        gpio_rgb_wifi_status(false); // Signal MQTT not connected (no Wi-Fi)
         
         xEventGroupSetBits(wifi_event_group, WIFI_DISCONNECTED_BIT);
     }
@@ -128,8 +128,6 @@ static void wifi_event_handler(void* arg, esp_event_base_t base, int32_t id, voi
         #endif
         
         connected_to_network = true;
-        
-        gpio_rgb_wifi_status(true);
                 
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
     }
@@ -164,12 +162,16 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 	    	#endif
     	
             esp_mqtt_client_subscribe(mqtt_client, topic, 0);
+            
+            gpio_rgb_wifi_status(true); // Signal MQTT connected
             break;
             
         case MQTT_EVENT_DISCONNECTED:
         	#ifdef POLYPLUG_DEBUG
             	ESP_LOGI(TAG, "Disconnected from MQTT");
             #endif
+            
+            gpio_rgb_wifi_status(false); // Signal MQTT not connected
             break;
             
         case MQTT_EVENT_DATA:
@@ -290,6 +292,7 @@ wifi_mqtt_t wifi_funcs_get_prev(void)
 
 esp_err_t wifi_funcs_wifi_disconnect(void)
 {	
+	// Called only by ESP-NOW before init-ing ESP-NOW
 	using_espnow = true;
 	
 	// Disconnect

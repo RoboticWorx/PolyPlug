@@ -14,6 +14,9 @@
 
 #define TAG "ESP_FUNCS"
 
+#define LORA_ENC_NS "es_lo_ns" // NVS namespace
+#define LORA_ENC_NS_KEY "es_lo_fmt" // FMT
+
 extern uint8_t received_enc_key[ENC_KEY_LEN];
 
 esp_err_t espnow_funcs_wifi_driver_init(void)
@@ -46,17 +49,6 @@ esp_err_t espnow_funcs_wifi_radio_start(uint8_t channel)
     return ESP_OK;
 }
 
-esp_err_t espnow_funcs_espnow_deinit(void)
-{
-	// De-initialize ESP-NOW
-    esp_err_t err = esp_now_deinit();
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "esp_now_deinit failed: %s", esp_err_to_name(err));
-    }
-    
-    return err;
-}
-
 esp_err_t espnow_funcs_espnow_register_recv_cb(esp_now_recv_cb_t cb)
 {
 	// Register receiver callback
@@ -68,17 +60,17 @@ esp_err_t espnow_funcs_espnow_register_recv_cb(esp_now_recv_cb_t cb)
     return err;
 }
 
-esp_err_t espnow_funcs_lora_key_nvs_save(uint8_t *enc_key, const char* ns, const char* fmt)
+esp_err_t espnow_funcs_lora_key_nvs_save(uint8_t *enc_key)
 {
     nvs_handle_t h;
 
     // Open NVS
-    esp_err_t err = nvs_open(ns, NVS_READWRITE, &h);
+    esp_err_t err = nvs_open(LORA_ENC_NS, NVS_READWRITE, &h);
     if (err != ESP_OK)
     	return err;
         
     // Store the key
-    err = nvs_set_blob(h, fmt, enc_key, ENC_KEY_LEN);
+    err = nvs_set_blob(h, LORA_ENC_NS_KEY, enc_key, ENC_KEY_LEN);
     
     // Flush pending writes to flash
     err = nvs_commit(h);
@@ -89,18 +81,18 @@ esp_err_t espnow_funcs_lora_key_nvs_save(uint8_t *enc_key, const char* ns, const
     return err;
 }
 
-esp_err_t espnow_funcs_lora_key_nvs_load(uint8_t *enc_key, const char* ns, const char* fmt)
+esp_err_t espnow_funcs_lora_key_nvs_load(uint8_t *enc_key)
 {
     nvs_handle_t h;
         
     // Open NVS
-    esp_err_t err = nvs_open(ns, NVS_READONLY, &h);
+    esp_err_t err = nvs_open(LORA_ENC_NS, NVS_READONLY, &h);
     if (err != ESP_OK)
     	return err;
     	
     size_t len = ENC_KEY_LEN;
 
-    err = nvs_get_blob(h, fmt, enc_key, &len);
+    err = nvs_get_blob(h, LORA_ENC_NS_KEY, enc_key, &len);
     
     // Close NVS
     nvs_close(h);

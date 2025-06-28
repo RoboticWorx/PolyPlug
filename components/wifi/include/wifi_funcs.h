@@ -19,7 +19,14 @@ typedef struct {
 esp_err_t wifi_funcs_connect(void);
 
 /**
- * @brief Configure and start the radio to join a given network
+ * @brief Disconnects from a given Wi-Fi network: to be called before esp_now_init
+ *
+ * @return ESP_ERR
+ */
+esp_err_t wifi_funcs_wifi_disconnect(void);
+
+/**
+ * @brief Configure the radio to join a given network
  *
  * @param [in] ssid Network SSID
  * @param [in] bssid Network BSSID
@@ -29,14 +36,38 @@ esp_err_t wifi_funcs_connect(void);
  */
 esp_err_t wifi_funcs_set_config(const char *ssid, const uint8_t* bssid, const char *password);
 
-void wifi_funcs_wifi_event_init(void);
-void wifi_funcs_mqtt_client_init(void);
-
-void wifi_funcs_get_current_date_time(void);
+/**
+ * @brief Gets the previously known network info from NVS
+ *
+ * @return Last network via wifi_mqtt_t
+ */
 wifi_mqtt_t wifi_funcs_get_prev(void);
 
+/**
+ * @brief Initializes Wi-Fi event handler
+ */
+void wifi_funcs_wifi_event_init(void);
+
+/**
+ * @brief Initializes MQTT client
+ */
+void wifi_funcs_mqtt_client_init(void);
+
+/**
+ * @brief Fetches current date and time via Wi-Fi
+ */
+void wifi_funcs_get_current_date_time(void);
+
+/**
+ * @brief Saves a given MAC address to NVS flash
+ *
+ * @param [in] mac The MAC address being saved
+ */
 void wifi_funcs_mac_nvs_save(const char *mac);
+
+/**
+ * @brief Loads a given MAC address from NVS flash: returns to global
+ */
 void wifi_funcs_mac_nvs_load(void);
-esp_err_t wifi_funcs_wifi_disconnect(void);
 
 #endif // WIFI_FUNCS_H

@@ -61,6 +61,7 @@ static void wifi_task(void *param)
 	while (1) {
 		
 		if (xQueueReceive(xWifiConnectQueue, &info, 0) == pdTRUE) {
+			// Switching from ESP-NOW: both false
 			connected_to_network = false;
 			using_espnow = false;
 			
@@ -72,6 +73,7 @@ static void wifi_task(void *param)
 		}
 		// Reconnect to previous known network
 		else if (xSemaphoreTake(xWifiReconnectSemaphore, 0) == pdTRUE) {
+			// Switching from ESP-NOW: both false
 			connected_to_network = false;
 			using_espnow = false;
 	
@@ -89,7 +91,7 @@ static void wifi_task(void *param)
 		// Poll reconnect
 		ESP_ERROR_CHECK(wifi_funcs_connect());
     	
-		vTaskDelay(pdMS_TO_TICKS(400));
+		vTaskDelay(pdMS_TO_TICKS(250));
 	}
 }
 
