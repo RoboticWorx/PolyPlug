@@ -1,0 +1,78 @@
+[1/5] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\ESPL\PolyPlug\build\esp-idf\esptool_py && C:\Espressif\python_env\idf5.4_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.4/components/partition_table/check_sizes.py --offset 0x8000 partition --type app C:/ESPL/PolyPlug/build/partition_table/partition-table.bin C:/ESPL/PolyPlug/build/app-template.bin"
+app-template.bin binary size 0xf5370 bytes. Smallest app partition is 0x100000 bytes. 0xac90 bytes (4%) free.
+Warning: The smallest app partition is nearly full (4% free space left)!
+[2/5] Performing build step for 'bootloader'
+[1/1] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\ESPL\PolyPlug\build\bootloader\esp-idf\esptool_py && C:\Espressif\python_env\idf5.4_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.4/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x2000 C:/ESPL/PolyPlug/build/bootloader/bootloader.bin"
+Bootloader binary size 0x53e0 bytes. 0xc20 bytes (13%) free.
+[3/5] No install step for 'bootloader'
+[4/5] Completed 'bootloader'
+[4/5] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\Espressif\frameworks\esp-idf-v5.4\components\esptool_py && C:\Espressif\tools\cmake\3.30.2\bin\cmake.exe -D IDF_PATH=C:/Espressif/frameworks/esp-idf-v5.4 -D SERIAL_TOOL=C:/Espressif/python_env/idf5.4_py3.11_env/Scripts/python.exe;;C:/Espressif/frameworks/esp-idf-v5.4/components/esptool_py/esptool/esptool.py;--chip;esp32c5 -D SERIAL_TOOL_ARGS=--before=default_reset;--after=hard_reset;write_flash;@flash_args -D WORKING_DIRECTORY=C:/ESPL/PolyPlug/build -P C:/Espressif/frameworks/esp-idf-v5.4/components/esptool_py/run_serial_tool.cmake"
+esptool.py --chip esp32c5 -p COM15 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 80m --flash_size 2MB 0x2000 bootloader/bootloader.bin 0x10000 app-template.bin 0x8000 partition_table/partition-table.bin
+esptool.py v4.8.1
+Serial port COM15
+Connecting...
+WARNING: This chip doesn't appear to be a ESP32-C5 (chip magic value 0x63e1406f). Probably it is unsupported by this version of esptool.
+Chip is ESP32-C5 (revision v0.1)
+Features: WiFi 6, BT 5, IEEE802.15.4
+Crystal is 48MHz
+MAC: 60:55:f9:ff:fe:fc:f3:88
+BASE MAC: 60:55:f9:fc:f3:88
+MAC_EXT: ff:fe
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 460800
+Changed.
+Configuring flash size...
+Flash will be erased from 0x00002000 to 0x00007fff...
+Flash will be erased from 0x00010000 to 0x00105fff...
+Flash will be erased from 0x00008000 to 0x00008fff...
+Compressed 21472 bytes to 13115...
+Writing at 0x00002000... (100 %)
+Wrote 21472 bytes (13115 compressed) at 0x00002000 in 0.2 seconds (effective 773.6 kbit/s)...
+Hash of data verified.
+Compressed 1004400 bytes to 570848...
+Writing at 0x00010000... (2 %)
+Writing at 0x0001cc23... (5 %)
+Writing at 0x0002835b... (8 %)
+Writing at 0x00031c03... (11 %)
+Writing at 0x00038c4a... (14 %)
+Writing at 0x0003f888... (17 %)
+Writing at 0x00046a59... (20 %)
+Writing at 0x0004e223... (22 %)
+Writing at 0x00055fde... (25 %)
+Writing at 0x0005d401... (28 %)
+Writing at 0x000644b3... (31 %)
+Writing at 0x0006b590... (34 %)
+Writing at 0x00072498... (37 %)
+Writing at 0x000793e3... (40 %)
+Writing at 0x00080233... (42 %)
+Writing at 0x00086d5b... (45 %)
+Writing at 0x0008d4b3... (48 %)
+Writing at 0x00094399... (51 %)
+Writing at 0x0009a8dc... (54 %)
+Writing at 0x000a10a7... (57 %)
+Writing at 0x000a78a0... (60 %)
+Writing at 0x000ad472... (62 %)
+Writing at 0x000b34b0... (65 %)
+Writing at 0x000b93a2... (68 %)
+Writing at 0x000bf74a... (71 %)
+Writing at 0x000c5e72... (74 %)
+Writing at 0x000cbca4... (77 %)
+Writing at 0x000d1aad... (80 %)
+Writing at 0x000d812d... (82 %)
+Writing at 0x000de714... (85 %)
+Writing at 0x000e47a5... (88 %)
+Writing at 0x000ead02... (91 %)
+Writing at 0x000f0de5... (94 %)
+Writing at 0x000f7bb0... (97 %)
+Writing at 0x000fde85... (100 %)
+Wrote 1004400 bytes (570848 compressed) at 0x00010000 in 4.0 seconds (effective 1993.7 kbit/s)...
+Hash of data verified.
+Compressed 3072 bytes to 103...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (103 compressed) at 0x00008000 in 0.1 seconds (effective 362.9 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...

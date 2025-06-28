@@ -4,6 +4,8 @@
 #include <time.h>
 #include <sys/time.h>
 
+#include "nvs.h"
+
 #include "mqtt_client.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
@@ -19,6 +21,9 @@
 
 #define TAG "WIFI_FUNCS"
 
+#define MAC_NS "ma_ns"
+#define MAC_NS_KEY "ma_ns_ke"
+
 #define WIFI_CONNECTED_BIT (1 << 0)
 #define WIFI_DISCONNECTED_BIT (1 << 1)
 
@@ -28,13 +33,14 @@
 #define TYPE_MGMT 0x00
 #define SUBTYPE_BEACON 0x08
 
+extern bool connected_to_network;
+extern bool using_espnow;
 
 static esp_mqtt_client_handle_t mqtt_client;
 
-static uint8_t target_bssid[6] = { 0x60, 0x55, 0xF9, 0xFC, 0xDE, 0xA8 };
 static EventGroupHandle_t wifi_event_group;
 
-bool wifi_connected = false;
+static char topic_mac_str[13];
 
 void wifi_funcs_get_current_date_time(void)
 {
@@ -107,10 +113,10 @@ static void wifi_event_handler(void* arg, esp_event_base_t base, int32_t id, voi
         	ESP_LOGW(TAG, "Disconnected, reason=%d", d->reason);
         #endif
         
-        wifi_funcs_radio_stop();
-        
+        connected_to_network = false;
+                
         gpio_rgb_wifi_status(false);
-
+        
         xEventGroupSetBits(wifi_event_group, WIFI_DISCONNECTED_BIT);
     }
     // Connected event
@@ -121,11 +127,11 @@ static void wifi_event_handler(void* arg, esp_event_base_t base, int32_t id, voi
         	ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&e->ip_info.ip));
         #endif
         
-        gpio_rgb_wifi_status(true);
+        connected_to_network = true;
         
+        gpio_rgb_wifi_status(true);
+                
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
-        		
-		wifi_connected = true;
     }
 }
 
@@ -148,12 +154,30 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         	#ifdef POLYPLUG_DEBUG
             	ESP_LOGI(TAG, "Connected to MQTT");
             #endif
+            
+            // Build the topic string
+			char topic[32];
+			snprintf(topic, sizeof(topic), "polycast5/%s/cmd", topic_mac_str);
+			
+			#ifdef POLYPLUG_DEBUG
+	    		ESP_LOGI(TAG, "Subscribed to MQTT topic '%s'", topic);
+	    	#endif
+    	
+            esp_mqtt_client_subscribe(mqtt_client, topic, 0);
             break;
+            
         case MQTT_EVENT_DISCONNECTED:
         	#ifdef POLYPLUG_DEBUG
             	ESP_LOGI(TAG, "Disconnected from MQTT");
             #endif
             break;
+            
+        case MQTT_EVENT_DATA:
+	        ESP_LOGI(TAG, "MQTT DATA incoming on topic=%.*s", event->topic_len, event->topic);
+	        ESP_LOGI(TAG, "Payload=%.*s", event->data_len, event->data);
+	        
+	        break;
+	        
         default:
             break;
     }
@@ -197,27 +221,31 @@ static bool wait_for_connection(TickType_t timeout)
 
 esp_err_t wifi_funcs_connect(void)
 {
-	xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT | WIFI_DISCONNECTED_BIT);
+	esp_err_t err = ESP_OK;
 	
-    esp_err_t err = esp_wifi_connect();
-    
-    // Check connetion
-    if (wait_for_connection(pdMS_TO_TICKS(15000))) {
-		#ifdef POLYPLUG_DEBUG
-    		ESP_LOGI(TAG, "Wi-Fi connected and got IP!");
-    	#endif
-    	esp_mqtt_client_start(mqtt_client); // Start mqtt client
-	}
-	else {
-	    ESP_LOGE(TAG, "Failed to connect");
-	    // Notify LCD
-	    wifi_funcs_radio_stop();
-	}
+	if (!connected_to_network && !using_espnow) {
+		xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT | WIFI_DISCONNECTED_BIT);
+		
+	    err = esp_wifi_connect();
+	    
+	    // Check connetion
+	    if (wait_for_connection(pdMS_TO_TICKS(15000))) {
+			#ifdef POLYPLUG_DEBUG
+	    		ESP_LOGI(TAG, "Wi-Fi connected and got IP!");
+	    	#endif
 	
+	    	esp_mqtt_client_start(mqtt_client); // Start MQTT client
+	    	connected_to_network = true;
+		}
+		else {
+		    ESP_LOGE(TAG, "Failed to connect");
+		    connected_to_network = false;
+		}
+	}
 	return err;
 }
 
-esp_err_t wifi_funcs_radio_start(const char *ssid, const uint8_t* bssid, const char *password)
+esp_err_t wifi_funcs_set_config(const char *ssid, const uint8_t* bssid, const char *password)
 {
 	wifi_config_t cfg = {0};
     
@@ -238,37 +266,12 @@ esp_err_t wifi_funcs_radio_start(const char *ssid, const uint8_t* bssid, const c
 		//     bssid[3], bssid[4], bssid[5]);
     	ESP_LOGI(TAG, "Setting Wi-Fi config password='%s'", password);
     #endif
-    
-    // Set mode
-    esp_err_t err = esp_wifi_set_mode(WIFI_MODE_STA);
-    if (err != ESP_OK) {
-		return err;
-	}
 	
 	// Set config
-    err = esp_wifi_set_config(ESP_IF_WIFI_STA, &cfg);
+    esp_err_t err = esp_wifi_set_config(ESP_IF_WIFI_STA, &cfg);
     if (err != ESP_OK) {
 		return err;
 	}
-	
-	// Start the driver
-    err = esp_wifi_start();
-    
-    return err;
-}
-
-esp_err_t wifi_funcs_radio_stop(void)
-{
-	esp_mqtt_client_stop(mqtt_client); // Stop possible client
-	esp_wifi_disconnect(); // Disconnect if connected
-	
-	// Stop Wi-Fi
-	esp_err_t err = esp_wifi_stop();
-    if (err != ESP_OK) {
-		ESP_LOGE(TAG, "wifi_funcs_radio_stop: %d", err);
-	}
-    
-    wifi_connected = false;
     
     return err;
 }
@@ -283,4 +286,77 @@ wifi_mqtt_t wifi_funcs_get_prev(void)
 	strlcpy(prev.password, (char*)current.sta.password, sizeof(current.sta.password));
 	
 	return prev;
+}
+
+esp_err_t wifi_funcs_wifi_disconnect(void)
+{	
+	using_espnow = true;
+	
+	// Disconnect
+	esp_mqtt_client_stop(mqtt_client); // Stop possible client
+	esp_err_t err = esp_wifi_disconnect(); // Disconnect if connected
+    
+    return err;
+}
+
+void wifi_funcs_mac_nvs_save(const char *mac)
+{
+    nvs_handle_t handle;
+    esp_err_t err;
+
+    // Open NVS namespace in RW mode
+    err = nvs_open(MAC_NS, NVS_READWRITE, &handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "nvs_open failed (%s)", esp_err_to_name(err));
+        return;
+    }
+
+    // Write or overwrite the string under key
+    err = nvs_set_str(handle, MAC_NS_KEY, mac);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "nvs_set_str failed (%s)", esp_err_to_name(err));
+        nvs_close(handle);
+        return;
+    }
+
+    // Commit to flash
+    err = nvs_commit(handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "nvs_commit failed (%s)", esp_err_to_name(err));
+    }
+    else {
+		#ifdef POLYPLUG_DEBUG
+	        ESP_LOGI(TAG, "MAC saved to NVS: %s", mac);
+        #endif
+        
+        // Copy into global for use
+        strlcpy(topic_mac_str, mac, sizeof(topic_mac_str));
+    }
+
+    // Close NVS
+    nvs_close(handle);
+}
+
+void wifi_funcs_mac_nvs_load(void)
+{
+	nvs_handle_t handle;
+	
+	// Open NVS
+	nvs_open(MAC_NS, NVS_READONLY, &handle);
+	
+	// Retreive string
+	size_t len = sizeof(topic_mac_str);
+	if (nvs_get_str(handle, MAC_NS_KEY, topic_mac_str, &len) == ESP_OK) {
+		#ifdef POLYPLUG_DEBUG
+		    ESP_LOGI(TAG, "Loaded MAC: %s", topic_mac_str);
+	    #endif
+	}
+	else {
+		#ifdef POLYPLUG_DEBUG
+			ESP_LOGW(TAG, "Failed to load MAC");
+	    #endif
+	}
+	
+	// Close NVS
+	nvs_close(handle);
 }

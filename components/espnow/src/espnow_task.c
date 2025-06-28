@@ -9,6 +9,7 @@
 #include "portmacro.h"
 
 #include "driver/gpio.h"
+#include "esp_wifi.h"
 #include "esp_log.h"
 
 #include "espnow_funcs.h"
@@ -96,17 +97,16 @@ static void espnow_task(void *param)
 	    // If key existed, send
 	    xQueueSend(xEspReceivedEncKeyQueue, received_enc_key, portMAX_DELAY);
 	}
-	    
+   
 	while (1) {
 		
 		// If ESPNOW pair button pressed
 		if (gpio_get_level(PAIR_BTN1_PIN) == 0) {
 			if (toggle_rx) {
-				// Disconnect from wifi if connected
-				ESP_ERROR_CHECK(wifi_funcs_radio_stop());
+				wifi_funcs_wifi_disconnect();
 				
-				// Start radio and initialize ESP-NOW
-				ESP_ERROR_CHECK(espnow_funcs_wifi_radio_start(WIFI_CHANNEL));
+				// Initialize ESP-NOW
+				ESP_ERROR_CHECK(esp_wifi_set_channel(WIFI_CHANNEL, 0) );
 				ESP_ERROR_CHECK(esp_now_init());
 				
 				// Register receive callback
@@ -115,9 +115,8 @@ static void espnow_task(void *param)
 	    		gpio_rgb_ready_to_rx(true); // Tell RGB we're ready to receive
 			}
 			else {
-				// Stop radio and de-initialize ESP-NOW
+				// De-initialize ESP-NOW
 			    ESP_ERROR_CHECK(espnow_funcs_espnow_deinit());
-			    ESP_ERROR_CHECK(espnow_funcs_wifi_radio_stop());
 			    
 			    gpio_rgb_ready_to_rx(false); // Back out RGB
 			    
@@ -135,7 +134,6 @@ static void espnow_task(void *param)
 		if (listen_triggered) {
 			// Stop radio and de-initialize ESP-NOW
 		    ESP_ERROR_CHECK(espnow_funcs_espnow_deinit());
-		    ESP_ERROR_CHECK(espnow_funcs_wifi_radio_stop());
 		    
 		    gpio_rgb_ready_to_rx(false); // Tell RGB we received
 		    

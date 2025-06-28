@@ -48,8 +48,7 @@ void app_main(void) {
 	
 	// Allocate Wi-Fi buffers now without fragmentation
     ESP_ERROR_CHECK(espnow_funcs_wifi_driver_init());
-    // Turn off radio to save power
-    ESP_ERROR_CHECK(espnow_funcs_wifi_radio_stop());
+    ESP_ERROR_CHECK(espnow_funcs_wifi_radio_start(WIFI_CHANNEL));
 	
 	// Initialize
 	gpio_spi_init();

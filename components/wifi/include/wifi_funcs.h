@@ -27,14 +27,16 @@ esp_err_t wifi_funcs_connect(void);
  *
  * @return ESP_ERR
  */
-esp_err_t wifi_funcs_radio_start(const char *ssid, const uint8_t* bssid, const char *password);
+esp_err_t wifi_funcs_set_config(const char *ssid, const uint8_t* bssid, const char *password);
 
 void wifi_funcs_wifi_event_init(void);
 void wifi_funcs_mqtt_client_init(void);
 
-esp_err_t wifi_funcs_radio_stop(void);
 void wifi_funcs_get_current_date_time(void);
 wifi_mqtt_t wifi_funcs_get_prev(void);
 
+void wifi_funcs_mac_nvs_save(const char *mac);
+void wifi_funcs_mac_nvs_load(void);
+esp_err_t wifi_funcs_wifi_disconnect(void);
 
 #endif // WIFI_FUNCS_H

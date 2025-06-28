@@ -24,6 +24,9 @@ QueueHandle_t xWifiConnectQueue;
 
 static wifi_mqtt_t info;
 
+bool connected_to_network = false;
+bool using_espnow = false;
+
 static void wifi_task(void *param)
 {
 	xWifiReconnectSemaphore = xSemaphoreCreateBinary();
@@ -32,17 +35,20 @@ static void wifi_task(void *param)
 	xWifiConnectQueue = xQueueCreate(1, sizeof(wifi_mqtt_t));
 	configASSERT(xWifiConnectQueue);
 	
+	wifi_funcs_mac_nvs_load(); // Load last sender MAC
+	
 	wifi_funcs_wifi_event_init();
 	wifi_funcs_mqtt_client_init();
 	
-	// Try to connect to previous
+	// Try to connect to last known network
 	wifi_mqtt_t prev_network = wifi_funcs_get_prev();
 	if (strlen(prev_network.ssid) > 0) { // If previous exists
 		#ifdef POLYPLUG_DEBUG
 			ESP_LOGI(TAG, "Trying to connect to previous network...");
 		#endif
 		
-		ESP_ERROR_CHECK(wifi_funcs_radio_start(prev_network.ssid, 0, prev_network.password));
+		// Connect
+		ESP_ERROR_CHECK(wifi_funcs_set_config(prev_network.ssid, 0, prev_network.password));
 				
 		ESP_ERROR_CHECK(wifi_funcs_connect());
 	}
@@ -55,23 +61,35 @@ static void wifi_task(void *param)
 	while (1) {
 		
 		if (xQueueReceive(xWifiConnectQueue, &info, 0) == pdTRUE) {
-			ESP_ERROR_CHECK(wifi_funcs_radio_start(info.ssid, 0, info.password));
-				
-			ESP_ERROR_CHECK(wifi_funcs_connect());
+			connected_to_network = false;
+			using_espnow = false;
+			
+			// Update config
+			ESP_ERROR_CHECK(wifi_funcs_set_config(info.ssid, 0, info.password));
+			
+			// Save sender MAC to NVS
+			wifi_funcs_mac_nvs_save(info.mac);
 		}
-		
 		// Reconnect to previous known network
-		if (xSemaphoreTake(xWifiReconnectSemaphore, 0) == pdTRUE) {
+		else if (xSemaphoreTake(xWifiReconnectSemaphore, 0) == pdTRUE) {
+			connected_to_network = false;
+			using_espnow = false;
+	
 			#ifdef POLYPLUG_DEBUG
 				ESP_LOGI(TAG, "Reconnect requested");
 			#endif
 			
-			ESP_ERROR_CHECK(wifi_funcs_radio_start(prev_network.ssid, 0, prev_network.password));
-					
-			ESP_ERROR_CHECK(wifi_funcs_connect());
+			// Update prev
+			wifi_mqtt_t prev_network = wifi_funcs_get_prev();
+						
+			// Update config
+			ESP_ERROR_CHECK(wifi_funcs_set_config(prev_network.ssid, 0, prev_network.password));
 		}
+		
+		// Poll reconnect
+		ESP_ERROR_CHECK(wifi_funcs_connect());
     	
-		vTaskDelay(pdMS_TO_TICKS(10));
+		vTaskDelay(pdMS_TO_TICKS(400));
 	}
 }
 

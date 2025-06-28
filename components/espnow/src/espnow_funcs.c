@@ -46,14 +46,6 @@ esp_err_t espnow_funcs_wifi_radio_start(uint8_t channel)
     return ESP_OK;
 }
 
-esp_err_t espnow_funcs_wifi_radio_stop(void)
-{
-    // Stop Wi-Fi
-    ESP_ERROR_CHECK(esp_wifi_stop());
-    
-    return ESP_OK;
-}
-
 esp_err_t espnow_funcs_espnow_deinit(void)
 {
 	// De-initialize ESP-NOW
