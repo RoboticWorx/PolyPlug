@@ -50,10 +50,12 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 	    
 	    listen_triggered = true;
 	    toggle_rx = !toggle_rx;
+
+	    // Send received enc key
+	    xQueueSend(xEspReceivedEncKeyQueue, received_enc_key, 0);
 	    
-	    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	    xQueueSendFromISR(xEspReceivedEncKeyQueue, received_enc_key, &xHigherPriorityTaskWoken);
-	    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	    // Try to reconnect to Wi-Fi with previously saved network
+		xSemaphoreGive(xWifiReconnectSemaphore);
 	}
 	// Else receiving a MAC address and network info for MQTT link
 	else if (data_len <= MQTT_MAX_LEN) {
@@ -75,9 +77,7 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 		    #endif
 		}
 		
-		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	    xQueueSendFromISR(xWifiConnectQueue, &network, &xHigherPriorityTaskWoken);
-	    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	    xQueueSendFromISR(xWifiConnectQueue, &network, 0);
 	    
 	    listen_triggered = true;
 	    toggle_rx = !toggle_rx;
