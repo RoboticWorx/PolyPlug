@@ -21,6 +21,7 @@
 #include "espnow_task.h"
 #include "gpio_task.h"
 #include "gpio_funcs.h"
+#include "wifi_task.h"
 
 // Logging tag
 static const char *TAG = "MAIN";
@@ -46,9 +47,9 @@ void app_main(void) {
     #endif
 	
 	// Allocate Wi-Fi buffers now without fragmentation
-    ESP_ERROR_CHECK(esp_funcs_wifi_driver_init());
+    ESP_ERROR_CHECK(espnow_funcs_wifi_driver_init());
     // Turn off radio to save power
-    ESP_ERROR_CHECK(esp_funcs_wifi_radio_stop());
+    ESP_ERROR_CHECK(espnow_funcs_wifi_radio_stop());
 	
 	// Initialize
 	gpio_spi_init();
@@ -58,6 +59,7 @@ void app_main(void) {
 	gpio_task_create();
 	lora_task_create();
 	espnow_task_create();
+	wifi_task_create();
 
 	#ifdef POLYPLUG_DEBUG
 		ESP_LOGI(TAG, "Main initialized and tasks created");

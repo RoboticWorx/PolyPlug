@@ -26,5 +26,7 @@ TickType_t gpio_get_random_ticks_from_range(int min_m, int max_m);
 
 void gpio_relay_on(void);
 void gpio_relay_off(void);
+void gpio_rgb_ready_to_rx(bool ready);
+void gpio_rgb_wifi_status(bool connected);
 
 #endif // GPIO_FUNCS_H

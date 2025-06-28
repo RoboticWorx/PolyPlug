@@ -84,5 +84,6 @@ $<TARGET_FILE:__idf_wifi_provisioning>
 $<TARGET_FILE:__idf_sx126x>
 $<TARGET_FILE:__idf_lora>
 $<TARGET_FILE:__idf_gpio>
+$<TARGET_FILE:__idf_wifi>
 $<TARGET_FILE:__idf_espnow>
 $<TARGET_FILE:__idf_main>

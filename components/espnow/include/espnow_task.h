@@ -7,6 +7,7 @@
 #define WIFI_CHANNEL 1
 
 #define ENC_KEY_LEN 16
+#define MQTT_MAX_LEN 111
 
 extern QueueHandle_t xEspReceivedEncKeyQueue;
 

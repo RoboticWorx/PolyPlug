@@ -84,5 +84,6 @@ C:/ESPL/PolyPlug/build/esp-idf/wifi_provisioning/libwifi_provisioning.a
 C:/ESPL/PolyPlug/build/esp-idf/sx126x/libsx126x.a
 C:/ESPL/PolyPlug/build/esp-idf/lora/liblora.a
 C:/ESPL/PolyPlug/build/esp-idf/gpio/libgpio.a
+C:/ESPL/PolyPlug/build/esp-idf/wifi/libwifi.a
 C:/ESPL/PolyPlug/build/esp-idf/espnow/libespnow.a
 C:/ESPL/PolyPlug/build/esp-idf/main/libmain.a

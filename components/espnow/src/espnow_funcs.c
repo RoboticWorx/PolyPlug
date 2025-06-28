@@ -16,7 +16,7 @@
 
 extern uint8_t received_enc_key[ENC_KEY_LEN];
 
-esp_err_t esp_funcs_wifi_driver_init(void)
+esp_err_t espnow_funcs_wifi_driver_init(void)
 {
 	// Bring up TCP/IP stack and default event loop
     ESP_ERROR_CHECK(esp_netif_init());
@@ -35,7 +35,7 @@ esp_err_t esp_funcs_wifi_driver_init(void)
     return ESP_OK;
 }
 
-esp_err_t esp_funcs_wifi_radio_start(uint8_t channel)
+esp_err_t espnow_funcs_wifi_radio_start(uint8_t channel)
 {
 	// Start Wi-Fi
     ESP_ERROR_CHECK(esp_wifi_start());
@@ -46,7 +46,7 @@ esp_err_t esp_funcs_wifi_radio_start(uint8_t channel)
     return ESP_OK;
 }
 
-esp_err_t esp_funcs_wifi_radio_stop(void)
+esp_err_t espnow_funcs_wifi_radio_stop(void)
 {
     // Stop Wi-Fi
     ESP_ERROR_CHECK(esp_wifi_stop());
@@ -54,7 +54,7 @@ esp_err_t esp_funcs_wifi_radio_stop(void)
     return ESP_OK;
 }
 
-esp_err_t esp_funcs_espnow_deinit(void)
+esp_err_t espnow_funcs_espnow_deinit(void)
 {
 	// De-initialize ESP-NOW
     esp_err_t err = esp_now_deinit();
@@ -65,7 +65,7 @@ esp_err_t esp_funcs_espnow_deinit(void)
     return err;
 }
 
-esp_err_t esp_funcs_espnow_register_recv_cb(esp_now_recv_cb_t cb)
+esp_err_t espnow_funcs_espnow_register_recv_cb(esp_now_recv_cb_t cb)
 {
 	// Register receiver callback
     esp_err_t err = esp_now_register_recv_cb(cb);
@@ -76,7 +76,7 @@ esp_err_t esp_funcs_espnow_register_recv_cb(esp_now_recv_cb_t cb)
     return err;
 }
 
-esp_err_t esp_lora_key_nvs_save(uint8_t *enc_key, const char* ns, const char* fmt)
+esp_err_t espnow_funcs_lora_key_nvs_save(uint8_t *enc_key, const char* ns, const char* fmt)
 {
     nvs_handle_t h;
 
@@ -97,7 +97,7 @@ esp_err_t esp_lora_key_nvs_save(uint8_t *enc_key, const char* ns, const char* fm
     return err;
 }
 
-esp_err_t esp_lora_key_nvs_load(uint8_t *enc_key, const char* ns, const char* fmt)
+esp_err_t espnow_funcs_lora_key_nvs_load(uint8_t *enc_key, const char* ns, const char* fmt)
 {
     nvs_handle_t h;
         

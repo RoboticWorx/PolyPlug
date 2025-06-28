@@ -23,6 +23,8 @@ spi_device_handle_t spi_sx126x; // For SX126x
 // Global SX126x instance
 sx126x_t sx126x;
 
+static bool relay_on = false;
+
 static const char *TAG = "GPIO_FUNCS";
 
 // Allowed times
@@ -158,6 +160,8 @@ TickType_t gpio_get_random_ticks_from_range(int min_m, int max_m)
 
 void gpio_relay_on(void)
 {
+	relay_on = true;
+	
 	// Relay ON
 	gpio_set_level(RELAY_PIN, 1);
 	
@@ -167,9 +171,41 @@ void gpio_relay_on(void)
 
 void gpio_relay_off(void)
 {
+	relay_on = false;
+	
 	// Relay OFF
 	gpio_set_level(RELAY_PIN, 0);
 	
 	// Blue RGB OFF
 	gpio_set_level(RGB_BLUE_PIN, 0);
+}
+
+void gpio_rgb_ready_to_rx(bool ready)
+{
+	// If ready to receive
+	if (ready) {
+		if (relay_on) {
+			gpio_set_level(RGB_BLUE_PIN, 0); // Blue off
+		}
+		gpio_set_level(RGB_GREEN_PIN, 1); // Set green
+	}
+	// Already received
+	else {
+		if (relay_on) {
+			gpio_set_level(RGB_BLUE_PIN, 1); // Put back blue
+		}
+		gpio_set_level(RGB_GREEN_PIN, 0); // Green off
+	}
+}
+
+void gpio_rgb_wifi_status(bool connected)
+{
+	// If ready to receive
+	if (connected) {
+		gpio_set_level(RGB_RED_PIN, 1); // Set red
+	}
+	// Already received
+	else {
+		gpio_set_level(RGB_RED_PIN, 0); // Red off
+	}
 }
