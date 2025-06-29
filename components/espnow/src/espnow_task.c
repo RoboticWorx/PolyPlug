@@ -65,7 +65,7 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 	    
 	    wifi_mqtt_t network;
 	    
-	    int n = sscanf((char *)data, "%32[^:]:%64[^:]:%12s", network.ssid, network.password, network.mac);
+	    int n = sscanf((char *)data, "%32[^:]:%64[^:]:%32s", network.ssid, network.password, network.key);
 		if (n != 3) {
 			#ifdef POLYPLUG_DEBUG
 			    ESP_LOGW(TAG, "Failed to parse MQTT payload (%d fields)", n);
@@ -73,7 +73,7 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 		}
 		else {
 			#ifdef POLYPLUG_DEBUG
-			    ESP_LOGI(TAG, "Parsed SSID=%s, PASS=%s, MAC=%s", network.ssid, network.password, network.mac);
+			    ESP_LOGI(TAG, "Parsed SSID=%s, PASS=%s, KEY=%s", network.ssid, network.password, network.key);
 		    #endif
 		}
 		

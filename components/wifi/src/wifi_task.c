@@ -69,7 +69,7 @@ static void wifi_task(void *param)
 			ESP_ERROR_CHECK(wifi_funcs_set_config(info.ssid, 0, info.password));
 			
 			// Save sender MAC to NVS
-			wifi_funcs_mac_nvs_save(info.mac);
+			wifi_funcs_mac_nvs_save(info.key);
 		}
 		// Reconnect to previous known network
 		else if (xSemaphoreTake(xWifiReconnectSemaphore, 0) == pdTRUE) {

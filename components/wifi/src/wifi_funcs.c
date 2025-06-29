@@ -21,8 +21,8 @@
 
 #define TAG "WIFI_FUNCS"
 
-#define MAC_NS "ma_ns"
-#define MAC_NS_KEY "ma_ns_ke"
+#define MQTT_NS "ma_ns"
+#define MQTT_NS_KEY "ma_ns_ke"
 
 #define WIFI_CONNECTED_BIT (1 << 0)
 #define WIFI_DISCONNECTED_BIT (1 << 1)
@@ -40,7 +40,7 @@ static esp_mqtt_client_handle_t mqtt_client;
 
 static EventGroupHandle_t wifi_event_group;
 
-static char topic_mac_str[13];
+static char topic_mac_str[33];
 
 void wifi_funcs_get_current_date_time(void)
 {
@@ -154,7 +154,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             #endif
             
             // Build the topic string
-			char topic[32];
+			char topic[64];
 			snprintf(topic, sizeof(topic), "polycast5/%s/cmd", topic_mac_str);
 			
 			#ifdef POLYPLUG_DEBUG
@@ -302,20 +302,20 @@ esp_err_t wifi_funcs_wifi_disconnect(void)
     return err;
 }
 
-void wifi_funcs_mac_nvs_save(const char *mac)
+void wifi_funcs_mac_nvs_save(const char *key)
 {
     nvs_handle_t handle;
     esp_err_t err;
 
     // Open NVS namespace in RW mode
-    err = nvs_open(MAC_NS, NVS_READWRITE, &handle);
+    err = nvs_open(MQTT_NS, NVS_READWRITE, &handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "nvs_open failed (%s)", esp_err_to_name(err));
         return;
     }
 
     // Write or overwrite the string under key
-    err = nvs_set_str(handle, MAC_NS_KEY, mac);
+    err = nvs_set_str(handle, MQTT_NS_KEY, key);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "nvs_set_str failed (%s)", esp_err_to_name(err));
         nvs_close(handle);
@@ -329,11 +329,11 @@ void wifi_funcs_mac_nvs_save(const char *mac)
     }
     else {
 		#ifdef POLYPLUG_DEBUG
-	        ESP_LOGI(TAG, "MAC saved to NVS: %s", mac);
+	        ESP_LOGI(TAG, "Key saved to NVS: %s", key);
         #endif
         
         // Copy into global for use
-        strlcpy(topic_mac_str, mac, sizeof(topic_mac_str));
+        strlcpy(topic_mac_str, key, sizeof(topic_mac_str));
     }
 
     // Close NVS
@@ -345,18 +345,18 @@ void wifi_funcs_mac_nvs_load(void)
 	nvs_handle_t handle;
 	
 	// Open NVS
-	nvs_open(MAC_NS, NVS_READONLY, &handle);
+	nvs_open(MQTT_NS, NVS_READONLY, &handle);
 	
 	// Retreive string
 	size_t len = sizeof(topic_mac_str);
-	if (nvs_get_str(handle, MAC_NS_KEY, topic_mac_str, &len) == ESP_OK) {
+	if (nvs_get_str(handle, MQTT_NS_KEY, topic_mac_str, &len) == ESP_OK) {
 		#ifdef POLYPLUG_DEBUG
-		    ESP_LOGI(TAG, "Loaded MAC: %s", topic_mac_str);
+		    ESP_LOGI(TAG, "Loaded key: %s", topic_mac_str);
 	    #endif
 	}
 	else {
 		#ifdef POLYPLUG_DEBUG
-			ESP_LOGW(TAG, "Failed to load MAC");
+			ESP_LOGW(TAG, "Failed to load key");
 	    #endif
 	}
 	

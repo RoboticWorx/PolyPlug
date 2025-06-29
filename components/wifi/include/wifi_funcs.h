@@ -8,7 +8,7 @@
 typedef struct {
     char ssid[33];
     char password[65];
-    char mac[13];
+    char key[33];
 } wifi_mqtt_t;
 
 /**
