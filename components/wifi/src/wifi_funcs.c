@@ -223,6 +223,13 @@ static bool wait_for_connection(TickType_t timeout)
 
 esp_err_t wifi_funcs_connect(void)
 {
+	// Make sure there is something to connect to
+	wifi_config_t cfg;
+    ESP_ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &cfg));
+    if (cfg.sta.ssid[0] == '\0') {
+        return ESP_OK;
+    }
+	
 	esp_err_t err = ESP_OK;
 	
 	if (!connected_to_network && !using_espnow) {
@@ -248,13 +255,13 @@ esp_err_t wifi_funcs_connect(void)
 }
 
 esp_err_t wifi_funcs_set_config(const char *ssid, const uint8_t* bssid, const char *password)
-{
+{	
 	wifi_config_t cfg = {0};
     
     // Copy in SSID and password
     strlcpy((char*)cfg.sta.ssid, ssid, sizeof(cfg.sta.ssid));
     strlcpy((char*)cfg.sta.password, password, sizeof(cfg.sta.password));
-    
+        
     // Copy BSSID
     //cfg.sta.bssid_set = true;
 	//memcpy(cfg.sta.bssid, bssid, sizeof(cfg.sta.bssid));
