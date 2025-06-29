@@ -40,7 +40,9 @@ static esp_mqtt_client_handle_t mqtt_client;
 
 static EventGroupHandle_t wifi_event_group;
 
-static char topic_mac_str[33];
+static char mqtt_topic_key_str[33];
+static char topic_cmd[64];
+static char topic_ack[64];
 
 void wifi_funcs_get_current_date_time(void)
 {
@@ -145,30 +147,30 @@ void wifi_funcs_wifi_event_init(void)
 }
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
-{
+{	
     esp_mqtt_event_handle_t event = event_data;
     switch (event->event_id) {
         case MQTT_EVENT_CONNECTED:
+		    // Build the topic and ack strings
+			snprintf(topic_cmd, sizeof(topic_cmd), "polycast5/%s/cmd", mqtt_topic_key_str);
+			snprintf(topic_ack, sizeof(topic_ack), "polycast5/%s/ack", mqtt_topic_key_str);
+			
         	#ifdef POLYPLUG_DEBUG
             	ESP_LOGI(TAG, "Connected to MQTT");
             #endif
-            
-            // Build the topic string
-			char topic[64];
-			snprintf(topic, sizeof(topic), "polycast5/%s/cmd", topic_mac_str);
 			
 			#ifdef POLYPLUG_DEBUG
-	    		ESP_LOGI(TAG, "Subscribed to MQTT topic '%s'", topic);
+	    		ESP_LOGI(TAG, "Subscribed to MQTT topic '%s'", topic_cmd);
 	    	#endif
     	
-            esp_mqtt_client_subscribe(mqtt_client, topic, 0);
+            esp_mqtt_client_subscribe(mqtt_client, topic_cmd, 0);
             
             gpio_rgb_wifi_status(true); // Signal MQTT connected
             break;
             
         case MQTT_EVENT_DISCONNECTED:
         	#ifdef POLYPLUG_DEBUG
-            	ESP_LOGI(TAG, "Disconnected from MQTT");
+            	ESP_LOGW(TAG, "Disconnected from MQTT");
             #endif
             
             gpio_rgb_wifi_status(false); // Signal MQTT not connected
@@ -178,6 +180,46 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 	        ESP_LOGI(TAG, "MQTT DATA incoming on topic=%.*s", event->topic_len, event->topic);
 	        ESP_LOGI(TAG, "Payload=%.*s", event->data_len, event->data);
 	        
+	        if (event->topic_len == strlen(topic_cmd) && memcmp(event->topic, topic_cmd, event->topic_len) == 0) {
+				#ifdef POLYPLUG_DEBUG
+					ESP_LOGI(TAG, "Sent MQTT ACK on %s", topic_ack);
+				#endif
+				
+				// Extract the payload
+		        char buf[4];
+		        size_t len = event->data_len < sizeof(buf) - 1 ? event->data_len : sizeof(buf) - 1;
+		        memcpy(buf, event->data, len);
+		        buf[len] = '\0';
+		
+		        // Parse with sscanf
+		        int value;
+		        if (sscanf(buf, "%d", &value) == 1) {
+		            // Validate range
+		            if (value >= 0 && value <= 255) {
+						#ifdef POLYPLUG_DEBUG
+			                ESP_LOGI(TAG, "Parsed payload as %d", value);
+		                #endif
+		                if (value == 1) {
+		                    gpio_relay_on();
+		                }
+		                else if (value == 0) {
+		                    gpio_relay_off();
+		                }
+		            }
+		            else {
+						#ifdef POLYPLUG_DEBUG
+			                ESP_LOGW(TAG, "Value out of range: %d", value);
+		                #endif
+		            }
+		        }
+		        else {
+					#ifdef POLYPLUG_DEBUG
+			            ESP_LOGW(TAG, "Failed to parse integer from '%s'", buf);
+		            #endif
+		        }
+				
+		        esp_mqtt_client_publish(mqtt_client, topic_ack, "PolyCast5MQTTRxSuccess", 0, 0, 0);
+	        }
 	        break;
 	        
         default:
@@ -255,7 +297,7 @@ esp_err_t wifi_funcs_connect(void)
 }
 
 esp_err_t wifi_funcs_set_config(const char *ssid, const uint8_t* bssid, const char *password)
-{	
+{
 	wifi_config_t cfg = {0};
     
     // Copy in SSID and password
@@ -340,7 +382,7 @@ void wifi_funcs_mac_nvs_save(const char *key)
         #endif
         
         // Copy into global for use
-        strlcpy(topic_mac_str, key, sizeof(topic_mac_str));
+        strlcpy(mqtt_topic_key_str, key, sizeof(mqtt_topic_key_str));
     }
 
     // Close NVS
@@ -355,10 +397,10 @@ void wifi_funcs_mac_nvs_load(void)
 	nvs_open(MQTT_NS, NVS_READONLY, &handle);
 	
 	// Retreive string
-	size_t len = sizeof(topic_mac_str);
-	if (nvs_get_str(handle, MQTT_NS_KEY, topic_mac_str, &len) == ESP_OK) {
+	size_t len = sizeof(mqtt_topic_key_str);
+	if (nvs_get_str(handle, MQTT_NS_KEY, mqtt_topic_key_str, &len) == ESP_OK) {
 		#ifdef POLYPLUG_DEBUG
-		    ESP_LOGI(TAG, "Loaded key: %s", topic_mac_str);
+		    ESP_LOGI(TAG, "Loaded key: %s", mqtt_topic_key_str);
 	    #endif
 	}
 	else {

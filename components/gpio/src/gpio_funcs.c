@@ -166,7 +166,7 @@ void gpio_relay_on(void)
 	gpio_set_level(RELAY_PIN, 1);
 	
 	// Blue RGB ON
-	gpio_set_level(RGB_BLUE_PIN, 1);
+	gpio_set_level(RGB_RED_PIN, 1);
 }
 
 void gpio_relay_off(void)
@@ -177,7 +177,7 @@ void gpio_relay_off(void)
 	gpio_set_level(RELAY_PIN, 0);
 	
 	// Blue RGB OFF
-	gpio_set_level(RGB_BLUE_PIN, 0);
+	gpio_set_level(RGB_RED_PIN, 0);
 }
 
 void gpio_rgb_ready_to_rx(bool ready)
@@ -185,16 +185,16 @@ void gpio_rgb_ready_to_rx(bool ready)
 	// If ready to receive
 	if (ready) {
 		if (relay_on) {
-			gpio_set_level(RGB_BLUE_PIN, 0); // Blue off
+			gpio_set_level(RGB_RED_PIN, 0); // Red off
 		}
-		gpio_set_level(RGB_GREEN_PIN, 1); // Set green
+		gpio_set_level(RGB_BLUE_PIN, 1); // Set Blue
 	}
 	// Already received
 	else {
 		if (relay_on) {
-			gpio_set_level(RGB_BLUE_PIN, 1); // Put back blue
+			gpio_set_level(RGB_RED_PIN, 1); // Put back red
 		}
-		gpio_set_level(RGB_GREEN_PIN, 0); // Green off
+		gpio_set_level(RGB_BLUE_PIN, 0); // Blue off
 	}
 }
 
@@ -202,10 +202,10 @@ void gpio_rgb_wifi_status(bool connected)
 {
 	// If ready to receive
 	if (connected) {
-		gpio_set_level(RGB_RED_PIN, 1); // Set red
+		gpio_set_level(RGB_GREEN_PIN, 1); // Set green
 	}
 	// Already received
 	else {
-		gpio_set_level(RGB_RED_PIN, 0); // Red off
+		gpio_set_level(RGB_GREEN_PIN, 0); // Green off
 	}
 }
