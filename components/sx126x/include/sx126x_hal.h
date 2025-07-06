@@ -56,10 +56,10 @@ extern "C" {
  */
 
 // Define GPIO pins for SX1262
-#define SX126X_NRST_PIN  0  // Reset pin
-#define SX126X_BUSY_PIN  8  // Busy pin
+#define SX126X_NRST_PIN  1  // Reset pin
+#define SX126X_BUSY_PIN  0  // Busy pin
 #define SX126X_DIO1_PIN  3  // DIO1 pin for IRQ
-#define SX126X_CS_PIN 1 // CS for SX126x
+#define SX126X_CS_PIN 8 // CS for SX126x
 
 /*
  * -----------------------------------------------------------------------------
