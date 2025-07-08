@@ -29,6 +29,19 @@ static void gpio_task(void *arg)
 	
 	while (1) 
 	{
+		if (gpio_get_level(PAIR_BTN2_PIN) == 0) {
+			if (relay_level) {
+				gpio_relay_on();
+			}
+			else {
+				gpio_relay_off();
+			}
+				
+    		relay_level = !relay_level;
+    		
+			vTaskDelay(pdMS_TO_TICKS(250)); // Wait for debounce
+		}
+		
 		// If received queue data (loop command)
 		if (xQueueReceive(xRelayToggleQueue, &relay_rx, 1) == pdPASS) {
 			if (relay_rx.index == 0) {

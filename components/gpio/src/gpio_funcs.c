@@ -80,7 +80,8 @@ void gpio_init(void)
 	
 	// Configure inputs
 	gpio_config_t io_conf_in = {
-	    .pin_bit_mask = (1ULL << PAIR_BTN1_PIN),
+	    .pin_bit_mask = (1ULL << PAIR_BTN1_PIN) |
+	    				(1ULL << PAIR_BTN2_PIN),
 	    .mode = GPIO_MODE_INPUT,
 	    .intr_type = GPIO_INTR_DISABLE,
 	    .pull_up_en = GPIO_PULLUP_ENABLE,
