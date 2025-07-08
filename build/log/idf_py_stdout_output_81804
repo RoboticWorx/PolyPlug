@@ -1,12 +1,12 @@
 [1/5] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\ESPL\PolyPlug\build\esp-idf\esptool_py && C:\Espressif\python_env\idf5.4_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.4/components/partition_table/check_sizes.py --offset 0x8000 partition --type app C:/ESPL/PolyPlug/build/partition_table/partition-table.bin C:/ESPL/PolyPlug/build/app-template.bin"
-app-template.bin binary size 0xf5a60 bytes. Smallest app partition is 0x177000 bytes. 0x815a0 bytes (34%) free.
+app-template.bin binary size 0xf6fe0 bytes. Smallest app partition is 0x700000 bytes. 0x609020 bytes (86%) free.
 [2/5] Performing build step for 'bootloader'
 [1/1] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\ESPL\PolyPlug\build\bootloader\esp-idf\esptool_py && C:\Espressif\python_env\idf5.4_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.4/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x2000 C:/ESPL/PolyPlug/build/bootloader/bootloader.bin"
 Bootloader binary size 0x53e0 bytes. 0xc20 bytes (13%) free.
 [3/5] No install step for 'bootloader'
 [4/5] Completed 'bootloader'
 [4/5] C:\WINDOWS\system32\cmd.exe /C "cd /D C:\Espressif\frameworks\esp-idf-v5.4\components\esptool_py && C:\Espressif\tools\cmake\3.30.2\bin\cmake.exe -D IDF_PATH=C:/Espressif/frameworks/esp-idf-v5.4 -D SERIAL_TOOL=C:/Espressif/python_env/idf5.4_py3.11_env/Scripts/python.exe;;C:/Espressif/frameworks/esp-idf-v5.4/components/esptool_py/esptool/esptool.py;--chip;esp32c5 -D SERIAL_TOOL_ARGS=--before=default_reset;--after=hard_reset;write_flash;@flash_args -D WORKING_DIRECTORY=C:/ESPL/PolyPlug/build -P C:/Espressif/frameworks/esp-idf-v5.4/components/esptool_py/run_serial_tool.cmake"
-esptool.py --chip esp32c5 -p COM3 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 80m --flash_size 2MB 0x2000 bootloader/bootloader.bin 0x10000 app-template.bin 0x8000 partition_table/partition-table.bin
+esptool.py --chip esp32c5 -p COM3 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 80m --flash_size 8MB 0x2000 bootloader/bootloader.bin 0x10000 app-template.bin 0x8000 partition_table/partition-table.bin
 esptool.py v4.8.1
 Serial port COM3
 Connecting...
@@ -24,53 +24,54 @@ Changing baud rate to 460800
 Changed.
 Configuring flash size...
 Flash will be erased from 0x00002000 to 0x00007fff...
-Flash will be erased from 0x00010000 to 0x00105fff...
+Flash will be erased from 0x00010000 to 0x00106fff...
 Flash will be erased from 0x00008000 to 0x00008fff...
 Compressed 21472 bytes to 13114...
 Writing at 0x00002000... (100 %)
-Wrote 21472 bytes (13114 compressed) at 0x00002000 in 0.2 seconds (effective 781.7 kbit/s)...
+Wrote 21472 bytes (13114 compressed) at 0x00002000 in 0.2 seconds (effective 786.5 kbit/s)...
 Hash of data verified.
-Compressed 1006176 bytes to 571849...
+Compressed 1011680 bytes to 574496...
 Writing at 0x00010000... (2 %)
-Writing at 0x0001cc44... (5 %)
-Writing at 0x000283ee... (8 %)
-Writing at 0x00031c80... (11 %)
-Writing at 0x00038d40... (14 %)
-Writing at 0x0003f937... (17 %)
-Writing at 0x00046d60... (20 %)
-Writing at 0x0004e2f9... (22 %)
-Writing at 0x0005612e... (25 %)
-Writing at 0x0005d57b... (28 %)
-Writing at 0x0006463d... (31 %)
-Writing at 0x0006b6b4... (34 %)
-Writing at 0x00072550... (37 %)
-Writing at 0x00079567... (40 %)
-Writing at 0x0008031b... (42 %)
-Writing at 0x00086edc... (45 %)
-Writing at 0x0008d663... (48 %)
-Writing at 0x00094447... (51 %)
-Writing at 0x0009a989... (54 %)
-Writing at 0x000a1245... (57 %)
-Writing at 0x000a7abd... (60 %)
-Writing at 0x000ad642... (62 %)
-Writing at 0x000b362a... (65 %)
-Writing at 0x000b957f... (68 %)
-Writing at 0x000bf82f... (71 %)
-Writing at 0x000c5ff6... (74 %)
-Writing at 0x000cbe8e... (77 %)
-Writing at 0x000d1c50... (80 %)
-Writing at 0x000d824c... (82 %)
-Writing at 0x000de850... (85 %)
-Writing at 0x000e490b... (88 %)
-Writing at 0x000ead50... (91 %)
-Writing at 0x000f0fa6... (94 %)
-Writing at 0x000f7b8e... (97 %)
-Writing at 0x000fdf62... (100 %)
-Wrote 1006176 bytes (571849 compressed) at 0x00010000 in 4.0 seconds (effective 2015.6 kbit/s)...
+Writing at 0x0001cb10... (5 %)
+Writing at 0x000284bb... (8 %)
+Writing at 0x00031d4b... (11 %)
+Writing at 0x00038f4b... (13 %)
+Writing at 0x0003fa4e... (16 %)
+Writing at 0x00046f58... (19 %)
+Writing at 0x0004e524... (22 %)
+Writing at 0x00056413... (25 %)
+Writing at 0x0005d881... (27 %)
+Writing at 0x00064902... (30 %)
+Writing at 0x0006b965... (33 %)
+Writing at 0x000726dd... (36 %)
+Writing at 0x00079821... (38 %)
+Writing at 0x00080573... (41 %)
+Writing at 0x0008730c... (44 %)
+Writing at 0x0008da3b... (47 %)
+Writing at 0x00094767... (50 %)
+Writing at 0x0009abcf... (52 %)
+Writing at 0x000a16de... (55 %)
+Writing at 0x000a7e27... (58 %)
+Writing at 0x000adb0f... (61 %)
+Writing at 0x000b39d6... (63 %)
+Writing at 0x000b9923... (66 %)
+Writing at 0x000bfbe0... (69 %)
+Writing at 0x000c646e... (72 %)
+Writing at 0x000cc2d7... (75 %)
+Writing at 0x000d20a6... (77 %)
+Writing at 0x000d8658... (80 %)
+Writing at 0x000ded0b... (83 %)
+Writing at 0x000e4e7c... (86 %)
+Writing at 0x000eb19d... (88 %)
+Writing at 0x000f1631... (91 %)
+Writing at 0x000f7ed4... (94 %)
+Writing at 0x000fe77b... (97 %)
+Writing at 0x00106753... (100 %)
+Wrote 1011680 bytes (574496 compressed) at 0x00010000 in 4.0 seconds (effective 2022.0 kbit/s)...
 Hash of data verified.
 Compressed 3072 bytes to 105...
 Writing at 0x00008000... (100 %)
-Wrote 3072 bytes (105 compressed) at 0x00008000 in 0.1 seconds (effective 360.7 kbit/s)...
+Wrote 3072 bytes (105 compressed) at 0x00008000 in 0.1 seconds (effective 359.2 kbit/s)...
 Hash of data verified.
 
 Leaving...

@@ -1,7 +1,7 @@
 {
     "version":            "1.2",
     "project_name":       "app-template",
-    "project_version":    "387f699-dirty",
+    "project_version":    "3e34992-dirty",
     "project_path":       "C:/ESPL/PolyPlug",
     "idf_path":           "C:/Espressif/frameworks/esp-idf-v5.4",
     "build_dir":          "C:/ESPL/PolyPlug/build",
@@ -1101,7 +1101,7 @@
             "type": "LIBRARY",
             "lib": "__idf_gpio",
             "reqs": [ "common" ],
-            "priv_reqs": [ "lora", "sx126x" ],
+            "priv_reqs": [ "lora", "sx126x", "esp_adc", "efuse" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "C:/ESPL/PolyPlug/build/esp-idf/gpio/libgpio.a",
@@ -2953,7 +2953,7 @@
             "dir": "C:/ESPL/PolyPlug/components/gpio",
             "lib": "__idf_gpio",
             "reqs": [ "common" ],
-            "priv_reqs": [ "lora", "sx126x" ],
+            "priv_reqs": [ "lora", "sx126x", "esp_adc", "efuse" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "include_dirs": [ "include" ]

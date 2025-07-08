@@ -13,5 +13,5 @@ idf_component_register(
     	common
     
     PRIV_REQUIRES
-    	lora sx126x
+    	lora sx126x esp_adc efuse
 )
