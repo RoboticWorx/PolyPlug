@@ -1,4 +1,4 @@
-# Install script for directory: C:/ESPL/PolyPlug/components/sx126x
+# Install script for directory: C:/Users/Jatki/OneDrive/Documents/ESP/PolyPlug/components/sx126x
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

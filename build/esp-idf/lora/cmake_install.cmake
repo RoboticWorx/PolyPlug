@@ -1,4 +1,4 @@
-# Install script for directory: C:/ESPL/PolyPlug/components/lora
+# Install script for directory: C:/Users/Jatki/OneDrive/Documents/ESP/PolyPlug/components/lora
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

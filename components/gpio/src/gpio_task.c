@@ -31,8 +31,12 @@ static void adc_task(void *arg)
 			
 			float v = gpio_get_ac_voltage();
 			
+			float Vout = v * (32.0f / 22.0f); // Undo voltage divider: V * (10 + 22) / 22
+			float current = (Vout - 2.5f) / 0.1f; // Subtract the mid-rail bias and divide by sensitivity
+			
 			#ifdef POLYPLUG_DEBUG
 				ESP_LOGI(TAG, "AC ADC voltage: %f", v);
+				ESP_LOGI(TAG, "Calculated current: %fA", current);
 			#endif
 		}
 		
