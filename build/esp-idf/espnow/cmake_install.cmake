@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/Jatki/OneDrive/Documents/ESP/PolyPlug/components/espnow
+# Install script for directory: C:/ESPL/PolyPlug/components/espnow
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

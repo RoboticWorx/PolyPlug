@@ -14,35 +14,9 @@ static const char *TAG = "GPIO_TASK";
 
 static bool relay_level = true;
 
-static const TickType_t adc_timer_interval = pdMS_TO_TICKS(5000); // 50s
-
 relay_t relay_rx;
 
 QueueHandle_t xRelayToggleQueue;
-
-static void adc_task(void *arg)
-{
-	TickType_t adc_timer_last = xTaskGetTickCount();
-	    
-    while (1) {
-		// Update battery status every adc_timer_interval
-		if (xTaskGetTickCount() - adc_timer_last >= adc_timer_interval) {
-			adc_timer_last = xTaskGetTickCount();
-			
-			float v = gpio_get_ac_voltage();
-			
-			float Vout = v * (32.0f / 22.0f); // Undo voltage divider: V * (10 + 22) / 22
-			float current = (Vout - 2.5f) / 0.1f; // Subtract the mid-rail bias and divide by sensitivity
-			
-			#ifdef POLYPLUG_DEBUG
-				ESP_LOGI(TAG, "AC ADC voltage: %f", v);
-				ESP_LOGI(TAG, "Calculated current: %fA", current);
-			#endif
-		}
-		
-		vTaskDelay(pdMS_TO_TICKS(10));
-    }
-}
 
 static void gpio_task(void *arg)
 {
@@ -52,10 +26,6 @@ static void gpio_task(void *arg)
 		ESP_LOGE(TAG, "Failed to create xRelayToggleQueue");
 	}
 	configASSERT(xRelayToggleQueue);
-	
-	if (xTaskCreate(adc_task, "adc_task", 1024 * 2, NULL, tskIDLE_PRIORITY + 1, NULL) != pdPASS) {
-	    ESP_LOGE(TAG, "Failed to start adc_task");
-	}
 	
 	while (1) 
 	{

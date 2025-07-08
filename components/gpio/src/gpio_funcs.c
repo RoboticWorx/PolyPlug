@@ -7,9 +7,6 @@
 
 #include "esp_log.h"
 #include "esp_random.h"
-#include "esp_adc/adc_oneshot.h"
-#include "esp_adc/adc_cali.h"
-#include "esp_adc/adc_cali_scheme.h"
 
 #include "gpio_funcs.h"
 #include "gpio_task.h"
@@ -30,9 +27,6 @@ spi_device_handle_t spi_sx126x; // For SX126x
 sx126x_t sx126x;
 
 static bool relay_on = false;
-
-static adc_oneshot_unit_handle_t adc1_handle = NULL;
-static adc_cali_handle_t cali_handle = NULL;
 
 static const char *TAG = "GPIO_FUNCS";
 
@@ -64,35 +58,6 @@ static const TickType_t time_ticks[] = {
    (18ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS, // 18 h
    (24ULL * 60ULL * 60ULL * 1000ULL) / portTICK_PERIOD_MS  // 24 h
 };
-
-static void gpio_init_ac_adc(void)
-{
-	// Init one-shot ADC
-    adc_oneshot_unit_init_cfg_t unit_cfg = {
-        .unit_id = ADC_UNIT_1,
-        .ulp_mode = ADC_ULP_MODE_DISABLE,
-    };
-    ESP_ERROR_CHECK(adc_oneshot_new_unit(&unit_cfg, &adc1_handle));
-
-	// Configure ADC channel
-    adc_oneshot_chan_cfg_t chan_cfg = {
-        .bitwidth = ADC_BITWIDTH_12,
-        .atten     = ADC_ATTEN_DB_12,
-    };
-    ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, ADC_CH, &chan_cfg));
-	
-	#ifdef POLYPLUG_DEBUG
-    	ESP_LOGI(TAG, "ADC initialized");
-    #endif
-    
-    // Configure curve fitting
-    adc_cali_curve_fitting_config_t cfg = {
-	    .unit_id   = ADC_UNIT_1,
-	    .atten     = ADC_ATTEN_DB_12,
-	    .bitwidth  = ADC_BITWIDTH_12,
-	};
-	ESP_ERROR_CHECK(adc_cali_create_scheme_curve_fitting(&cfg, &cali_handle));
-}
 
 void gpio_init(void)
 {
@@ -126,8 +91,6 @@ void gpio_init(void)
 	    .pull_down_en = GPIO_PULLDOWN_DISABLE,
 	};
 	gpio_config(&io_conf_in);
-	
-	gpio_init_ac_adc();
 }
 
 void gpio_spi_init(void) 
@@ -165,27 +128,6 @@ void gpio_spi_init(void)
 	sx126x.hal_wakeup = sx126x_hal_wakeup;
 	sx126x.hal_write = sx126x_hal_write;
 	sx126x.hal_read = sx126x_hal_read;
-}
-
-float gpio_get_ac_voltage(void)
-{
-	uint32_t sum = 0;
-	
-	// Average readings
-	for (int i = 0; i < NUM_ADC_SAMPLES; i++) {
-	    int raw;
-	    ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, ADC_CH, &raw));
-	    sum += raw;
-	    esp_rom_delay_us(5);
-	}
-	int avg_raw = sum / NUM_ADC_SAMPLES;
-	
-	// Get pin mV
-	int pin_mv;
-	ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, avg_raw, &pin_mv));
-	float Vadc = pin_mv / 1000.0f; // Convert to volts
-	
-	return Vadc;
 }
 
 // Lookup helper

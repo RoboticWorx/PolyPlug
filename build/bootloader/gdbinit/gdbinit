@@ -1,2 +1,2 @@
-source C:/Users/Jatki/OneDrive/Documents/ESP/PolyPlug/build/bootloader/gdbinit/symbols
-source C:/Users/Jatki/OneDrive/Documents/ESP/PolyPlug/build/bootloader/gdbinit/connect
+source C:/ESPL/PolyPlug/build/bootloader/gdbinit/symbols
+source C:/ESPL/PolyPlug/build/bootloader/gdbinit/connect

@@ -47,13 +47,6 @@ TickType_t gpio_get_random_ticks_from_range(int min_m, int max_m);
 void gpio_relay_toggle(bool on);
 
 /**
- * @brief Read the voltage at the AC ADC pin
- *
- * @return The measured voltage
- */
-float gpio_get_ac_voltage(void);
-
-/**
  * @brief Set RGB LED based on RX status
  *
  * @param [in] ready If ready to receive or not
