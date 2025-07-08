@@ -159,26 +159,26 @@ TickType_t gpio_get_random_ticks_from_range(int min_m, int max_m)
     return pdMS_TO_TICKS((uint64_t)total_seconds * 1000ULL);
 }
 
-void gpio_relay_on(void)
+void gpio_relay_toggle(bool on)
 {
-	relay_on = true;
+	if (on) {
+		relay_on = true;
 	
-	// Relay ON
-	gpio_set_level(RELAY_PIN, 1);
+		// Relay ON
+		gpio_set_level(RELAY_PIN, 1);
+		
+		// Blue RGB ON
+		gpio_set_level(RGB_RED_PIN, 1);
+	}
+	else {
+		relay_on = false;
 	
-	// Blue RGB ON
-	gpio_set_level(RGB_RED_PIN, 1);
-}
-
-void gpio_relay_off(void)
-{
-	relay_on = false;
-	
-	// Relay OFF
-	gpio_set_level(RELAY_PIN, 0);
-	
-	// Blue RGB OFF
-	gpio_set_level(RGB_RED_PIN, 0);
+		// Relay OFF
+		gpio_set_level(RELAY_PIN, 0);
+		
+		// Blue RGB OFF
+		gpio_set_level(RGB_RED_PIN, 0);
+	}
 }
 
 void gpio_rgb_ready_to_rx(bool ready)

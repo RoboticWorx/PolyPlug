@@ -1,7 +1,7 @@
 {
     "version":            "1.2",
     "project_name":       "app-template",
-    "project_version":    "389040a-dirty",
+    "project_version":    "387f699-dirty",
     "project_path":       "C:/ESPL/PolyPlug",
     "idf_path":           "C:/Espressif/frameworks/esp-idf-v5.4",
     "build_dir":          "C:/ESPL/PolyPlug/build",

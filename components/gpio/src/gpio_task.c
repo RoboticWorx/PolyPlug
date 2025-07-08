@@ -29,32 +29,31 @@ static void gpio_task(void *arg)
 	
 	while (1) 
 	{
+		// Toggle relay with button press
 		if (gpio_get_level(PAIR_BTN2_PIN) == 0) {
-			if (relay_level) {
-				gpio_relay_on();
-			}
-			else {
-				gpio_relay_off();
-			}
+			gpio_relay_toggle(relay_level);
 				
     		relay_level = !relay_level;
     		
-			vTaskDelay(pdMS_TO_TICKS(250)); // Wait for debounce
+			vTaskDelay(pdMS_TO_TICKS(500)); // Wait for debounce
 		}
 		
-		// If received queue data (loop command)
+		// If received relay queue data gpio_relay_toggle(false);
 		if (xQueueReceive(xRelayToggleQueue, &relay_rx, 1) == pdPASS) {
-			if (relay_rx.index == 0) {
-				if (relay_level) {
-					gpio_relay_on();
-				}
-				else {
-					gpio_relay_off();
-				}
+			if (relay_rx.index == -2) { // Relay OFF
+				gpio_relay_toggle(false);
+				relay_level = true; // True to toggle from false if toggle cmd sent
+			}
+			else if (relay_rx.index == -1) { // Relay ON
+				gpio_relay_toggle(true);
+				relay_level = false; // False to toggle from true if toggle cmd sent
+			}
+			else if (relay_rx.index == 0) { // LoRa command toggle
+				gpio_relay_toggle(relay_level);
 				
     			relay_level = !relay_level;
 			}
-			else if (relay_rx.index == 1) {
+			else if (relay_rx.index == 1) { // LoRa command loop
 				#ifdef POLYPLUG_DEBUG
 					ESP_LOGI(TAG, "RECEIVED: on=%s, off=%s", relay_rx.loop_on, relay_rx.loop_off);
 				#endif
@@ -70,9 +69,8 @@ static void gpio_task(void *arg)
 	
 	            // Loop until new data arrives
 	            while(1) {
-					
 	                // Start ON loop for duration until new data received
-	                gpio_relay_on();
+	                gpio_relay_toggle(true);
 	                relay_level = false; // False to toggle from true if toggle cmd sent
 	                if (xQueueReceive(xRelayToggleQueue, &relay_rx, on_ticks) == pdPASS) {
 						#ifdef POLYPLUG_DEBUG
@@ -87,7 +85,7 @@ static void gpio_task(void *arg)
 	                }
 	                
 	                // Start OFF loop for duration until new data received
-	                gpio_relay_off();
+	                gpio_relay_toggle(false);
 	                relay_level = true; // True to toggle from false if toggle cmd sent
 	                if (xQueueReceive(xRelayToggleQueue, &relay_rx, off_ticks) == pdPASS) {
 						#ifdef POLYPLUG_DEBUG
@@ -120,7 +118,7 @@ static void gpio_task(void *arg)
 				        ESP_LOGI(TAG, "Away ON for %d min %d sec", m, s);
 			        #endif
 			        
-			        gpio_relay_on();
+			        gpio_relay_toggle(true);
 			        relay_level = false; // False to toggle from true if toggle cmd sent
 			        
 			        // Wait in ON state unless a new command arrives
@@ -147,7 +145,7 @@ static void gpio_task(void *arg)
 				        ESP_LOGI(TAG, "Away OFF for %d min %d sec", m, s);
 			        #endif
 			        
-			        gpio_relay_off();
+			        gpio_relay_toggle(false);
 			        relay_level = true; // True to toggle from false if toggle cmd sent
 			        
 			        // Wait in OFF state unless a new command arrives

@@ -4,6 +4,7 @@
 
 #include "esp_log.h"
 
+#include "portmacro.h"
 #include "sx126x_hal.h"
 #include "lora_funcs.h"
 #include "lora_task.h"
@@ -126,7 +127,7 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	        
 	        // Simple toggle
 	        if (cmd == 0) {
-				xQueueSend(xRelayToggleQueue, &relay_tx, 1);
+				xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
 				
 				// Send receipt
 				valid_data_rec = true;

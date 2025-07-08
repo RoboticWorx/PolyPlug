@@ -13,20 +13,51 @@
 
 /**
  * @brief Initialize gpio pins
- *
- * @return ESP_OK on success
  */
 void gpio_init(void);
 
+/**
+ * @brief Initialize SPI
+ */
 void gpio_spi_init(void);
 
+/**
+ * @brief Initialize gpio pins
+ *
+ * @param [in] s Time to look up
+ *
+ * @return Passed time in ticks
+ */
 TickType_t gpio_lookup_time_ticks(const char *s);
 
+/**
+ * @brief Initialize gpio pins
+ *
+ * @param [in] s Time to look up
+ *
+ * @return Passed time in ticks
+ */
 TickType_t gpio_get_random_ticks_from_range(int min_m, int max_m);
 
-void gpio_relay_on(void);
-void gpio_relay_off(void);
+/**
+ * @brief Toggle AC relay
+ *
+ * @param [in] on State to put relay: on or off
+ */
+void gpio_relay_toggle(bool on);
+
+/**
+ * @brief Set RGB LED based on RX status
+ *
+ * @param [in] ready If ready to receive or not
+ */
 void gpio_rgb_ready_to_rx(bool ready);
+
+/**
+ * @brief Set RGB LED based on Wi-Fi status
+ *
+ * @param [in] connected If connected to Wi-Fi
+ */
 void gpio_rgb_wifi_status(bool connected);
 
 #endif // GPIO_FUNCS_H

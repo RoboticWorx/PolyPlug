@@ -199,11 +199,15 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 						#ifdef POLYPLUG_DEBUG
 			                ESP_LOGI(TAG, "Parsed payload as %d", value);
 		                #endif
+		                
+		                relay_t relay_tx;		                
 		                if (value == 1) {
-		                    gpio_relay_on();
+							relay_tx.index = -1; // Relay ON cmd
+							xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
 		                }
 		                else if (value == 0) {
-		                    gpio_relay_off();
+							relay_tx.index = -2; // Relay OFF cmd
+							xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
 		                }
 		                // Handle other cases here. (Set GPIO pins to correspond to received value)
 		            }
