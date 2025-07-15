@@ -114,12 +114,13 @@ static void plan_mode_task(void *arg) {
         time_t on_time = next_event_epoch(days_mask, on_sec);
         
         // Compute the next OFF
-        time_t off_time = next_event_epoch(days_mask, off_sec);
-        
-        // If it would fall before the ON, bump it by one week.
-        if (off_time <= on_time) {
-			off_time += 7 * 86400;
-		}
+        // Derive midnight of the ON day
+		struct tm tm_on;
+		localtime_r(&on_time, &tm_on);
+		time_t midnight_on = on_time - (tm_on.tm_hour * 3600 + tm_on.tm_min * 60 + tm_on.tm_sec);
+		
+		// Always schedule OFF within 24h of ON
+		time_t off_time = (off_sec > on_sec) ? (midnight_on + off_sec) : (midnight_on + 86400 + off_sec);
 
         // Wait until ON time
         vTaskDelay(pdMS_TO_TICKS((on_time - now) * 1000));
