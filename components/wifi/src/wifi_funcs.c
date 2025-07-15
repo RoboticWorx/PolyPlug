@@ -289,6 +289,8 @@ esp_err_t wifi_funcs_connect(void)
 			#ifdef POLYPLUG_DEBUG
 	    		ESP_LOGI(TAG, "Wi-Fi connected and got IP!");
 	    	#endif
+	    	
+	    	wifi_funcs_get_current_date_time();
 	
 	    	esp_mqtt_client_start(mqtt_client); // Start MQTT client
 	    	connected_to_network = true;

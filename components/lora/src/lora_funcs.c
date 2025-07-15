@@ -151,6 +151,37 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 		            ESP_LOGE(TAG, "Bad loop args: \"%s\"", instr_buf);
 		        }
 	        }
+	        // Plan mode
+	        else if (cmd == 2) {
+			    char days_buf[PLAN_DAYS_LEN] = {0};
+			    char on_buf[PLAN_TIME_LEN] = {0};
+			    char off_buf[PLAN_TIME_LEN] = {0};
+			
+			    // If parsed successfully
+			    if (sscanf(instr_buf, "d %7[^ ] o %6[^ ] f %6[^ ]", days_buf, on_buf, off_buf) == 3) {
+			        // Start fresh
+			        memset(relay_tx.plan_days, 0, sizeof(relay_tx.plan_days));
+			        memset(relay_tx.plan_on, 0, sizeof(relay_tx.plan_on));
+			        memset(relay_tx.plan_off, 0, sizeof(relay_tx.plan_off));
+					
+					// Save and send
+			        strncpy(relay_tx.plan_days, days_buf, sizeof(relay_tx.plan_days) - 1);
+			        strncpy(relay_tx.plan_on, on_buf, sizeof(relay_tx.plan_on) - 1);
+			        strncpy(relay_tx.plan_off, off_buf, sizeof(relay_tx.plan_off) - 1);
+			        xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+			        
+			        #ifdef POLYPLUG_DEBUG
+				        ESP_LOGI(TAG, "Plan parsed: days='%s' on='%s' off='%s'",
+				        		relay_tx.plan_days, relay_tx.plan_on, relay_tx.plan_off);
+			        #endif
+			        
+			        // Send receipt
+		            valid_data_rec = true;
+			    }
+			    else {
+			        ESP_LOGE(TAG, "Bad plan args: '%s'", instr_buf);
+			    }
+			}
 	        // Away mode
 	        else if (cmd == 3) {
 				int away_min, away_max;

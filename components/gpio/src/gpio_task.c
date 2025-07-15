@@ -1,14 +1,21 @@
-#include "freertos/projdefs.h"
 #include "polyplug_macros.h"
+
+#include <time.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/projdefs.h"
 
 #include "driver/gpio.h"
 #include "esp_log.h"
 
 #include "gpio_funcs.h"
 #include "gpio_task.h"
+
+#define MAX_PLANS 10 // Concurrent 'plan' times allowed to run in parallel
+
+static TaskHandle_t plan_tasks[MAX_PLANS];
+static size_t plan_count = 0;
 
 static const char *TAG = "GPIO_TASK";
 
@@ -18,6 +25,113 @@ relay_t relay_rx;
 
 QueueHandle_t xRelayToggleQueue;
 
+/* Plan mode helpers */
+// Parse “1...7” day format into bitmask
+static int parse_weekdays(const char *days) {
+    int mask = 0; // Start 0
+    
+    // Loop over each character in the days string until you hit the terminator
+    for (; *days; days++) {
+        int digit = *days - '0'; // Convert ASCII digit to integer
+        
+        // Only accept digits 1 through 7 (valid days)
+        if (digit >= 1 && digit <= 7) {
+            int w = (digit == 7 ? 0 : digit); // If digit==7 (Sunday), map to w=0. Otherwise, Monday(1)->1, Tuesday(2)->2
+            
+            // Set the bit in the mask
+            mask |= (1 << w);
+        }
+    }
+    return mask;
+}
+// Parse “HHMMSS” format into the number of seconds since midnight
+static int parse_hhmmss(const char *s) {
+    int int_str = atoi(s); // Parse the string into an integer (turn directly)
+    
+    int hour = int_str / 10000; // Isolate hours
+    int min = (int_str / 100) % 100; // Isolate minutes
+    int sec = int_str % 100; // Isolate seconds
+    
+    return hour * 3600 + min * 60 + sec; // Seconds since midnight
+}
+// Find the next epoch >= now that matches days_mask and sec_of_day
+static time_t next_event_epoch(int days_mask, int sec_of_day) {
+    time_t now = time(NULL); // Read the current epoch (seconds since 1970)
+    
+    // Break that epoch into a calendar struct tm
+    struct tm tmn;
+    localtime_r(&now, &tmn);
+    
+    // Compute the epoch at today's midnight
+    time_t today0 = now - (tmn.tm_hour * 3600 + tmn.tm_min * 60 + tmn.tm_sec);
+
+	// Try each offset from d=0 (today) to d=6
+    for (int day = 0; day < 7; day++) {
+		// Compute weekday
+        int weekday = (tmn.tm_wday + day) % 7;
+        
+        // If that weekday is enabled in your days_mask, build a candidate epoch
+        if (days_mask & (1 << weekday)) {
+            time_t candidate = today0 + day * 86400 + sec_of_day;
+            
+            // If cand > now, that's the very next matching event so return it.
+            if (candidate > now) {
+				return candidate;
+			}
+        }
+    }
+    
+    // Fallback: first matching day next week
+    for (int day = 1; day <= 7; day++) {
+		// Compute weekday
+        int weekday = (tmn.tm_wday + day) % 7;
+        
+        // If that weekday is enabled in your days_mask, build a candidate epoch
+        if (days_mask & (1 << weekday)) {
+            return today0 + day * 86400 + sec_of_day;
+        }
+    }
+    return now;
+}
+
+/* Plan mode task */
+static void plan_mode_task(void *arg) {
+	// Grab heap-allocated structure
+    relay_t *plan = arg;
+    
+    // Precompute masks and seconds
+    int days_mask = parse_weekdays(plan->plan_days);
+    int on_sec = parse_hhmmss(plan->plan_on);
+    int off_sec = parse_hhmmss(plan->plan_off);
+    
+    free(plan); // No longer needed
+
+    while (1) {
+		// Read current epoch again
+        time_t now = time(NULL);
+        
+        // Compute the absolute epoch of the next ON
+        time_t on_time = next_event_epoch(days_mask, on_sec);
+        
+        // Compute the next OFF
+        time_t off_time = next_event_epoch(days_mask, off_sec);
+        
+        // If it would fall before the ON, bump it by one week.
+        if (off_time <= on_time) {
+			off_time += 7 * 86400;
+		}
+
+        // Wait until ON time
+        vTaskDelay(pdMS_TO_TICKS((on_time - now) * 1000));
+        gpio_relay_toggle(true);
+
+        // then wait until OFF time
+        vTaskDelay(pdMS_TO_TICKS((off_time - on_time) * 1000));
+        gpio_relay_toggle(false);
+    }
+}
+
+/* Main task */
 static void gpio_task(void *arg)
 {
 	// Create queue
@@ -99,6 +213,34 @@ static void gpio_task(void *arg)
 	                    break;
 	                }
 	            }
+			}
+			// Plan mode
+			else if (relay_rx.index == 2) {	            
+	            if (plan_count < MAX_PLANS) {
+			        relay_t *plan = malloc(sizeof(*plan));
+			        *plan = relay_rx;
+			        if (xTaskCreate(plan_mode_task, "plan_mode", 1024 * 2,
+	                		plan, tskIDLE_PRIORITY + 1, &plan_tasks[plan_count]) != pdPASS) {
+						free(plan);
+						ESP_LOGE(TAG, "Failed to create plan_mode_task");
+					}
+					else {
+						plan_count++;
+					}
+			    }
+			    else {
+			    	ESP_LOGE(TAG, "Plan queue full (%u/%u)", plan_count, MAX_PLANS);
+			    }
+			    
+			    /*
+			    NOT YET IMPLEMENTED: For reference reset all code:
+			    for (size_t i = 0; i < plan_count; ++i) {
+			        vTaskDelete(plan_tasks[i]);
+			        ESP_LOGI(TAG, "Deleted plan task %u", (unsigned)i);
+			    }
+			    plan_count = 0;
+			    ESP_LOGI(TAG, "All plan tasks cleared");
+			    */
 			}
 			// Away mode
 			else if (relay_rx.index == 3) {

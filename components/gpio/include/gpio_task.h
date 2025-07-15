@@ -4,16 +4,6 @@
 #include "freertos/FreeRTOS.h"
 //#include "freertos/semphr.h"
 
-#define LOOP_LEN 4
-
-typedef struct {
-	int index;
-    char loop_on[LOOP_LEN];
-    char loop_off[LOOP_LEN];
-    int away_min;
-    int away_max;
-} relay_t;
-
 extern QueueHandle_t xRelayToggleQueue;
 
 /**

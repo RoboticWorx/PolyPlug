@@ -11,6 +11,21 @@
 #define RGB_GREEN_PIN 11
 #define RGB_BLUE_PIN 25
 
+#define LOOP_LEN 4
+#define PLAN_DAYS_LEN 8 // 7 days + NULL
+#define PLAN_TIME_LEN 7 // "HHMMSS" + NULL
+
+typedef struct {
+	int index;
+    char loop_on[LOOP_LEN];
+    char loop_off[LOOP_LEN];
+    char plan_days[PLAN_DAYS_LEN];
+    char plan_on[PLAN_TIME_LEN];
+    char plan_off[PLAN_TIME_LEN];
+    int away_min;
+    int away_max;
+} relay_t;
+
 /**
  * @brief Initialize gpio pins
  */
