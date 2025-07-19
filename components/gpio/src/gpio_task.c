@@ -93,6 +93,20 @@ static time_t next_event_epoch(int days_mask, int sec_of_day) {
     }
     return now;
 }
+// Delay for up to UINT32_MAX ticks at a time, splitting larger waits into chunks
+static void delay_ms_safe(uint64_t ms)
+{
+    // Convert milliseconds to ticks, rounding up so we never under-sleep
+    uint64_t ticks = (ms + portTICK_PERIOD_MS - 1) / portTICK_PERIOD_MS;
+
+    // FreeRTOS tick type is 32-bit, so split if necessary
+    const uint64_t maxTicks = (uint64_t)UINT32_MAX;
+    while (ticks > 0) {
+        TickType_t chunk = (TickType_t)(ticks > maxTicks ? maxTicks : ticks);
+        vTaskDelay(chunk);
+        ticks -= chunk;
+    }
+}
 
 /* Plan mode task */
 static void plan_mode_task(void *arg) {
@@ -122,13 +136,22 @@ static void plan_mode_task(void *arg) {
 		// Always schedule OFF within 24h of ON
 		time_t off_time = (off_sec > on_sec) ? (midnight_on + off_sec) : (midnight_on + 86400 + off_sec);
 
-        // Wait until ON time
-        vTaskDelay(pdMS_TO_TICKS((on_time - now) * 1000));
-        gpio_relay_toggle(true);
-
-        // then wait until OFF time
-        vTaskDelay(pdMS_TO_TICKS((off_time - on_time) * 1000));
-        gpio_relay_toggle(false);
+		uint64_t on_ms  = (uint64_t)(on_time  - now) * 1000ULL;
+		uint64_t off_ms = (uint64_t)(off_time - on_time) * 1000ULL;
+		
+		// Wait until ON time
+		#ifdef POLYPLUG_DEBUG
+		  ESP_LOGI(TAG, "Waiting until ON: '%" PRIu64 "' ms", on_ms);
+		#endif
+		delay_ms_safe(on_ms);
+		gpio_relay_toggle(true);
+		
+		// Wait until OFF time
+		#ifdef POLYPLUG_DEBUG
+		  ESP_LOGI(TAG, "Waiting until OFF: '%" PRIu64 "' ms", off_ms);
+		#endif
+		delay_ms_safe(off_ms);
+		gpio_relay_toggle(false);
     }
 }
 
