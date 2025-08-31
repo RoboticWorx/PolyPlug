@@ -1,4 +1,4 @@
-# Install script for directory: C:/ESPL/PolyPlug/components/common
+# Install script for directory: C:/Projects/ESP/PolyPlug/components/common
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

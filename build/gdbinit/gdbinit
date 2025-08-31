@@ -1,2 +1,2 @@
-source C:/ESPL/PolyPlug/build/gdbinit/symbols
-source C:/ESPL/PolyPlug/build/gdbinit/connect
+source C:/Projects/ESP/PolyPlug/build/gdbinit/symbols
+source C:/Projects/ESP/PolyPlug/build/gdbinit/connect

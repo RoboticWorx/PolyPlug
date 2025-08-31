@@ -1,4 +1,4 @@
-# Install script for directory: C:/Espressif/frameworks/esp-idf-v5.4/components/newlib
+# Install script for directory: C:/Espressif/frameworks/esp-idf-v5.5/components/newlib
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -39,6 +39,6 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("C:/ESPL/PolyPlug/build/esp-idf/newlib/port/cmake_install.cmake")
+  include("C:/Projects/ESP/PolyPlug/build/esp-idf/newlib/src/port/cmake_install.cmake")
 endif()
 

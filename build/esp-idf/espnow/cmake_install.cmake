@@ -1,4 +1,4 @@
-# Install script for directory: C:/ESPL/PolyPlug/components/espnow
+# Install script for directory: C:/Projects/ESP/PolyPlug/components/espnow
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
