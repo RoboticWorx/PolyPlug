@@ -124,7 +124,7 @@ static void lora_task(void *pvParameters) {
 		ESP_LOGE(TAG, "Failed to set TX params");
 	}
 
-	// sx126x_set_rx_tx_fallback_mode // Default is RC standby
+	//sx126x_set_rx_tx_fallback_mode // Default is RC standby
 
 	status = sx126x_cfg_rx_boosted(
 		NULL, true); // More sensitive RX at cost of more power
@@ -181,7 +181,7 @@ static void lora_task(void *pvParameters) {
 		}
 		//ESP_LOG_BUFFER_HEX("CURRENT KEY", enc_key_buf, ENC_KEY_LEN);
 
-		vTaskDelay(pdMS_TO_TICKS(500));
+		vTaskDelay(pdMS_TO_TICKS(50));
 	}
 }
 
@@ -197,7 +197,7 @@ static void lora_event_handler_task(void *pvParameters) {
 			// If transmission complete
 			if (irq_flags & SX126X_IRQ_TX_DONE) {
 				#ifdef POLYPLUG_DEBUG
-					ESP_LOGI(TAG, "Transmission completed");
+				ESP_LOGI(TAG, "Transmission completed");
 				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_TX_DONE);
 				lora_set_rx_mode(); // Prepare to receive next transmission
@@ -218,11 +218,10 @@ static void lora_event_handler_task(void *pvParameters) {
 				rx_size = rx_status.pld_len_in_bytes;
 
 				// Read data into buffer
-				sx126x_read_buffer(NULL, rx_status.buffer_start_pointer,
-								   rx_buffer, rx_size);
+				sx126x_read_buffer(NULL, rx_status.buffer_start_pointer, rx_buffer, rx_size);
 
 				#ifdef POLYPLUG_DEBUG
-					ESP_LOGI(TAG, "Received packet of size %d", rx_size);
+				ESP_LOGI(TAG, "Received packet of size %d", rx_size);
 				#endif
 
 				// Process received
@@ -230,19 +229,19 @@ static void lora_event_handler_task(void *pvParameters) {
 				
 				// Log RSSI
 				sx126x_pkt_status_lora_t pkt_status;
-			    if (sx126x_get_lora_pkt_status(NULL, &pkt_status) == SX126X_STATUS_OK) {
+				if (sx126x_get_lora_pkt_status(NULL, &pkt_status) == SX126X_STATUS_OK) {
 					#ifdef POLYPLUG_DEBUG
-				        ESP_LOGI(TAG, "Packet RSSI: %d dBm, SignalRSSI: %d dBm, SNR: %d dB",
-				                 pkt_status.rssi_pkt_in_dbm,
-				                 pkt_status.signal_rssi_pkt_in_dbm,
-				                 pkt_status.snr_pkt_in_db);
-			        #endif
-			    }
-			    else {
+					ESP_LOGI(TAG, "Packet RSSI: %d dBm, SignalRSSI: %d dBm, SNR: %d dB",
+							pkt_status.rssi_pkt_in_dbm,
+							pkt_status.signal_rssi_pkt_in_dbm,
+							pkt_status.snr_pkt_in_db);
+					#endif
+				}
+				else {
 					#ifdef POLYPLUG_DEBUG
-			        	ESP_LOGW(TAG, "Failed to get packet status");
-			        #endif
-			    }
+					ESP_LOGW(TAG, "Failed to get packet status");
+					#endif
+				}
 
 				// Clear IRQ
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_RX_DONE);
@@ -254,7 +253,7 @@ static void lora_event_handler_task(void *pvParameters) {
 
 			if (irq_flags & SX126X_IRQ_TIMEOUT) {
 				#ifdef POLYPLUG_DEBUG
-					ESP_LOGW(TAG, "RX timeout occurred");
+				ESP_LOGW(TAG, "RX timeout occurred");
 				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_TIMEOUT);
 				lora_set_rx_mode(); // Reset RX
@@ -262,7 +261,7 @@ static void lora_event_handler_task(void *pvParameters) {
 
 			if (irq_flags & SX126X_IRQ_HEADER_ERROR) {
 				#ifdef POLYPLUG_DEBUG
-					ESP_LOGE(TAG, "Header error in received packet");
+				ESP_LOGE(TAG, "Header error in received packet");
 				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_HEADER_ERROR);
 				lora_set_rx_mode(); // Reset RX
@@ -270,7 +269,7 @@ static void lora_event_handler_task(void *pvParameters) {
 
 			if (irq_flags & SX126X_IRQ_CRC_ERROR) {
 				#ifdef POLYPLUG_DEBUG
-					ESP_LOGE(TAG, "CRC error in received packet");
+				ESP_LOGE(TAG, "CRC error in received packet");
 				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_CRC_ERROR);
 				lora_set_rx_mode(); // Reset RX

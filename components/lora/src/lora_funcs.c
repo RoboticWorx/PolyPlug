@@ -22,7 +22,7 @@ static bool valid_data_rec = false;
 static uint32_t last_rx_id = 0;
 
 void lora_set_key(const uint8_t *key) {
-    memcpy(encryption_key, key, ENC_KEY_LEN);
+	memcpy(encryption_key, key, ENC_KEY_LEN);
 }
 
 static void generate_random_iv(uint8_t *iv, size_t length) {
@@ -70,7 +70,7 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	// (minimum ciphertext)
 	if (message_len < 32) {
 		#ifdef POLYPLUG_DEBUG
-			ESP_LOGI(TAG, "Received message too short!");
+		ESP_LOGI(TAG, "Received message too short!");
 		#endif
 		
 		return;
@@ -79,18 +79,17 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	// The expected message length is 80 bytes (16 IV + 64 cyphertext)
 	if (message_len != CYPHERTEXT_LENGTH + 16) {
 		#ifdef POLYPLUG_DEBUG
-			ESP_LOGI(TAG, "Unexpected message length: %u bytes\n", (unsigned)message_len);
+		ESP_LOGI(TAG, "Unexpected message length: %u bytes\n", (unsigned)message_len);
 		#endif
 		
 		return;
 	}
 
-	uint8_t iv[IV_LENGTH];			// To hold IV
+	uint8_t iv[IV_LENGTH]; // To hold IV
 	memcpy(iv, message, IV_LENGTH); // Extract the IV (first 16 bytes)
 
 	uint8_t ciphertext[CYPHERTEXT_LENGTH]; // To hold cyphertext
-	memcpy(ciphertext, message + IV_LENGTH,
-		   CYPHERTEXT_LENGTH); // Extract the ciphertext (remaining 64 bytes)
+	memcpy(ciphertext, message + IV_LENGTH, CYPHERTEXT_LENGTH); // Extract the ciphertext (remaining 64 bytes)
 
 	// Initialize the AES context with the key and received IV.
 	struct AES_ctx ctx;
@@ -103,7 +102,7 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 
 	// "cyphertext" is now decrypted - print
 	#ifdef POLYPLUG_DEBUG
-		ESP_LOGI(TAG, "Decrypted text: %s\n", ciphertext);
+	ESP_LOGI(TAG, "Decrypted text: %s\n", ciphertext);
 	#endif
 		
 	// Processing logic:
@@ -116,115 +115,115 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	
 	if (got == 3) {
 		#ifdef POLYPLUG_DEBUG
-			ESP_LOGI(TAG, "Parsed rx_id=%" PRIu32 ", cmd=%d, instr=\"%s\"", rx_id, cmd, instr_buf);
+		ESP_LOGI(TAG, "Parsed rx_id=%" PRIu32 ", cmd=%d, instr=\"%s\"", rx_id, cmd, instr_buf);
 		#endif
-	    
-	    // Check for unique ID
-	    if (rx_id != last_rx_id) {
-	        last_rx_id = rx_id;
-	        
-	        relay_tx.index = cmd;
-	        
-	        // Simple toggle
-	        if (cmd == 0) {
+		
+		// Check for unique ID
+		if (rx_id != last_rx_id) {
+			last_rx_id = rx_id;
+			
+			relay_tx.index = cmd;
+			
+			// Simple toggle
+			if (cmd == 0) {
 				xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
 				
 				// Send receipt
 				valid_data_rec = true;
-	        }
-	        // Loop with specific times
-	        else if (cmd == 1) {
+			}
+			// Loop with specific times
+			else if (cmd == 1) {
 				char on_arg[LOOP_LEN], off_arg[LOOP_LEN];
 				
-		        if (sscanf(instr_buf, "on %3s off %3s", on_arg, off_arg) == 2) {
+				if (sscanf(instr_buf, "on %3s off %3s", on_arg, off_arg) == 2) {
 					memset(relay_tx.loop_on,  0, LOOP_LEN);
 					memset(relay_tx.loop_off, 0, LOOP_LEN);
 					strncpy(relay_tx.loop_on,  on_arg,  LOOP_LEN - 1);
 					strncpy(relay_tx.loop_off, off_arg, LOOP_LEN - 1);
 
-		            xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
-		            
-		            // Send receipt
-		            valid_data_rec = true;
-		        }
-		        else {
-		            ESP_LOGE(TAG, "Bad loop args: \"%s\"", instr_buf);
-		        }
-	        }
-	        // Plan mode
-	        else if (cmd == 2) {
-			    char days_buf[PLAN_DAYS_LEN] = {0};
-			    char on_buf[PLAN_TIME_LEN] = {0};
-			    char off_buf[PLAN_TIME_LEN] = {0};
+					xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+					
+					// Send receipt
+					valid_data_rec = true;
+				}
+				else {
+					ESP_LOGE(TAG, "Bad loop args: \"%s\"", instr_buf);
+				}
+			}
+			// Plan mode
+			else if (cmd == 2) {
+				char days_buf[PLAN_DAYS_LEN] = {0};
+				char on_buf[PLAN_TIME_LEN] = {0};
+				char off_buf[PLAN_TIME_LEN] = {0};
 			
-			    // If parsed successfully
-			    if (sscanf(instr_buf, "d %7[^ ] o %6[^ ] f %6[^ ]", days_buf, on_buf, off_buf) == 3) {
-			        // Start fresh
-			        memset(relay_tx.plan_days, 0, sizeof(relay_tx.plan_days));
-			        memset(relay_tx.plan_on, 0, sizeof(relay_tx.plan_on));
-			        memset(relay_tx.plan_off, 0, sizeof(relay_tx.plan_off));
+				// If parsed successfully
+				if (sscanf(instr_buf, "d %7[^ ] o %6[^ ] f %6[^ ]", days_buf, on_buf, off_buf) == 3) {
+					// Start fresh
+					memset(relay_tx.plan_days, 0, sizeof(relay_tx.plan_days));
+					memset(relay_tx.plan_on, 0, sizeof(relay_tx.plan_on));
+					memset(relay_tx.plan_off, 0, sizeof(relay_tx.plan_off));
 					
 					// Save and send
-			        strncpy(relay_tx.plan_days, days_buf, sizeof(relay_tx.plan_days) - 1);
-			        strncpy(relay_tx.plan_on, on_buf, sizeof(relay_tx.plan_on) - 1);
-			        strncpy(relay_tx.plan_off, off_buf, sizeof(relay_tx.plan_off) - 1);
-			        xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
-			        
-			        #ifdef POLYPLUG_DEBUG
-				        ESP_LOGI(TAG, "Plan parsed: days='%s' on='%s' off='%s'",
-				        		relay_tx.plan_days, relay_tx.plan_on, relay_tx.plan_off);
-			        #endif
-			        
-			        // Send receipt
-		            valid_data_rec = true;
-			    }
-			    else {
-			        ESP_LOGE(TAG, "Bad plan args: '%s'", instr_buf);
-			    }
+					strncpy(relay_tx.plan_days, days_buf, sizeof(relay_tx.plan_days) - 1);
+					strncpy(relay_tx.plan_on, on_buf, sizeof(relay_tx.plan_on) - 1);
+					strncpy(relay_tx.plan_off, off_buf, sizeof(relay_tx.plan_off) - 1);
+					xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+					
+					#ifdef POLYPLUG_DEBUG
+					ESP_LOGI(TAG, "Plan parsed: days='%s' on='%s' off='%s'",
+							relay_tx.plan_days, relay_tx.plan_on, relay_tx.plan_off);
+					#endif
+					
+					// Send receipt
+					valid_data_rec = true;
+				}
+				else {
+					ESP_LOGE(TAG, "Bad plan args: '%s'", instr_buf);
+				}
 			}
-	        // Away mode
-	        else if (cmd == 3) {
+			// Away mode
+			else if (cmd == 3) {
 				int away_min, away_max;
 				
-		        if (sscanf(instr_buf, "away %d-%dm", &away_min, &away_max) == 2) {
+				if (sscanf(instr_buf, "away %d-%dm", &away_min, &away_max) == 2) {
 					#ifdef POLYPLUG_DEBUG
-						ESP_LOGI(TAG, "Parsed away range: %d to %d minutes", away_min, away_max);
+					ESP_LOGI(TAG, "Parsed away range: %d to %d minutes", away_min, away_max);
 					#endif
 					
 					// Save and send
-		            relay_tx.away_min = away_min;
-		            relay_tx.away_max = away_max;
-		            xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
-		            
-		            // Send receipt
-		            valid_data_rec = true;
-		        }
-		        else {
-		            ESP_LOGE(TAG, "Bad away args: \"%s\"", instr_buf);
-		        }
+					relay_tx.away_min = away_min;
+					relay_tx.away_max = away_max;
+					xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+					
+					// Send receipt
+					valid_data_rec = true;
+				}
+				else {
+					ESP_LOGE(TAG, "Bad away args: \"%s\"", instr_buf);
+				}
 			}
-	        else {
+			else {
 				#ifdef POLYPLUG_DEBUG
-					ESP_LOGW(TAG, "Unknown command %d", cmd);
+				ESP_LOGW(TAG, "Unknown command %d", cmd);
 				#endif
-	        }
-	    }
-	    else {
+			}
+		}
+		else {
 			#ifdef POLYPLUG_DEBUG
-				ESP_LOGW(TAG, "Duplicate msg, re-ACK only");
+			ESP_LOGW(TAG, "Duplicate msg, re-ACK only");
 			#endif
-	        
-	        // Still send receipt, but don't re-execute.
-		    // This is for case when cmd was received but receipt was lost.
-		    // This prevents the sender from thinking it wasn't received and re-sending to un-do what the first send did.
-	        
-	        // Send receipt
-		    valid_data_rec = true;
-	    }
+			
+			// Still send receipt, but don't re-execute.
+			// This is for case when cmd was received but receipt was lost.
+			// This prevents the sender from thinking it wasn't received and re-sending to un-do what the first send did.
+			
+			// Send receipt
+			valid_data_rec = true;
+		}
 	}
 	else {
 		#ifdef POLYPLUG_DEBUG
-			ESP_LOGE(TAG, "Failed to parse incoming \"%s\"", ciphertext);
+		ESP_LOGE(TAG, "Failed to parse incoming \"%s\"", ciphertext);
 		#endif
 	}
 }
@@ -239,7 +238,7 @@ void lora_send_receipt()
 		snprintf(payload, sizeof(payload), "PolyCast_Command_Value_Received:%" PRIu32, last_rx_id);
 	
 		#ifdef POLYPLUG_DEBUG
-			ESP_LOGI(TAG, "SENDING: %s", payload);
+		ESP_LOGI(TAG, "SENDING: %s", payload);
 		#endif
 	
 		// Encrypt and send over
@@ -255,11 +254,10 @@ void lora_send_receipt()
 
 void lora_encrypt_and_transmit(uint8_t plaintext[])
 {
-	uint8_t buffer[CYPHERTEXT_LENGTH]; // Padded to 64 bytes (must be multiple
-									   // of 16)
+	uint8_t buffer[CYPHERTEXT_LENGTH]; // Padded to 64 bytes (must be multiple of 16)
 	memcpy(buffer, plaintext, sizeof(buffer)); // Copy the 64 bytes into buffer
 
-	uint8_t iv[IV_LENGTH];				// To hold IV
+	uint8_t iv[IV_LENGTH]; // To hold IV
 	generate_random_iv(iv, sizeof(iv)); // Generate random IV into iv[16]
 
 	/*ESP_LOGI(TAG, "Generated IV: ");
