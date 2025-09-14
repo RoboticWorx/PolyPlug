@@ -216,7 +216,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=app-template
+CMAKE_PROJECT_NAME:STATIC=PolyPlug
 
 //Value Computed by CMake
 CMAKE_PROJECT_VERSION:STATIC=3.6.3
@@ -357,6 +357,15 @@ PYTHON:UNINITIALIZED=C:\Espressif\python_env\idf5.5_py3.11_env\Scripts\python.ex
 
 //No help, variable specified on the command line.
 PYTHON_DEPS_CHECKED:UNINITIALIZED=1
+
+//Value Computed by CMake
+PolyPlug_BINARY_DIR:STATIC=C:/Projects/ESP/PolyPlug/build
+
+//Value Computed by CMake
+PolyPlug_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+PolyPlug_SOURCE_DIR:STATIC=C:/Projects/ESP/PolyPlug
 
 //Allow unsafe builds. These builds ARE NOT SECURE.
 UNSAFE_BUILD:BOOL=OFF

@@ -155,20 +155,20 @@ static void plan_mode_task(void *arg) {
 		
 		// If we are already inside today's window, start immediately
 		if (today_enabled && now >= today_on && now < today_off) {
-		    gpio_relay_toggle(true);
-		    relay_level = false; // False to toggle from true if toggle cmd sent
-		    uint64_t remain_ms = (uint64_t)(today_off - now) * 1000ULL;
-		    #ifdef POLYPLUG_DEBUG
+			gpio_relay_toggle(true);
+			relay_level = false; // False to toggle from true if toggle cmd sent
+			uint64_t remain_ms = (uint64_t)(today_off - now) * 1000ULL;
+			#ifdef POLYPLUG_DEBUG
 			ESP_LOGI(TAG, "today_enabled: Waiting until OFF: '%" PRIu64 "' ms", remain_ms);
 			#endif
-		    delay_ms_safe(remain_ms);
-		    
-		    gpio_relay_toggle(false);
-		    relay_level = true; // True to toggle from false if toggle cmd sent
-		    #ifdef POLYPLUG_DEBUG
+			delay_ms_safe(remain_ms);
+			
+			gpio_relay_toggle(false);
+			relay_level = true; // True to toggle from false if toggle cmd sent
+			#ifdef POLYPLUG_DEBUG
 			ESP_LOGI(TAG, "today_enabled: Continuing");
 			#endif
-		    continue; // Next cycle
+			continue; // Next cycle
 		}
 		
 		/* Check if later */

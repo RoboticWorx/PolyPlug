@@ -17,4 +17,4 @@ set confirm off
 set confirm on
 
 # Load application symbols
-file C:/Projects/ESP/PolyPlug/build/app-template.elf
+file C:/Projects/ESP/PolyPlug/build/PolyPlug.elf

@@ -10,7 +10,7 @@ C:/Projects/ESP/PolyPlug/build/CMakeFiles/monitor.dir
 C:/Projects/ESP/PolyPlug/build/CMakeFiles/flash.dir
 C:/Projects/ESP/PolyPlug/build/CMakeFiles/encrypted-flash.dir
 C:/Projects/ESP/PolyPlug/build/CMakeFiles/_project_elf_src.dir
-C:/Projects/ESP/PolyPlug/build/CMakeFiles/app-template.elf.dir
+C:/Projects/ESP/PolyPlug/build/CMakeFiles/PolyPlug.elf.dir
 C:/Projects/ESP/PolyPlug/build/CMakeFiles/size.dir
 C:/Projects/ESP/PolyPlug/build/CMakeFiles/size-files.dir
 C:/Projects/ESP/PolyPlug/build/CMakeFiles/size-components.dir

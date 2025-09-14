@@ -44,7 +44,7 @@ static void wifi_task(void *param)
 	wifi_mqtt_t prev_network = wifi_funcs_get_prev();
 	if (strlen(prev_network.ssid) > 0) { // If previous exists
 		#ifdef POLYPLUG_DEBUG
-			ESP_LOGI(TAG, "Trying to connect to previous network...");
+		ESP_LOGI(TAG, "Trying to connect to previous network...");
 		#endif
 		
 		// Connect
@@ -54,10 +54,10 @@ static void wifi_task(void *param)
 	}
 	else {
 		#ifdef POLYPLUG_DEBUG
-			ESP_LOGW(TAG, "No previous network to connect to");
+		ESP_LOGW(TAG, "No previous network to connect to");
 		#endif
 	}
-    
+	
 	while (1) {
 		
 		if (xQueueReceive(xWifiConnectQueue, &info, 0) == pdTRUE) {
@@ -78,7 +78,7 @@ static void wifi_task(void *param)
 			using_espnow = false;
 	
 			#ifdef POLYPLUG_DEBUG
-				ESP_LOGI(TAG, "Reconnect requested");
+			ESP_LOGI(TAG, "Reconnect requested");
 			#endif
 			
 			// Update prev
@@ -90,14 +90,14 @@ static void wifi_task(void *param)
 		
 		// Poll reconnect
 		ESP_ERROR_CHECK(wifi_funcs_connect());
-    	
+		
 		vTaskDelay(pdMS_TO_TICKS(250));
 	}
 }
 
 void wifi_task_create(void)
 {
-    if (xTaskCreate(wifi_task, "wifi_task", 1024 * 3, NULL, tskIDLE_PRIORITY + 1, NULL) != pdPASS) {
-	    ESP_LOGE(TAG, "Failed to start wifi_task");
+	if (xTaskCreate(wifi_task, "wifi_task", 1024 * 3, NULL, tskIDLE_PRIORITY + 1, NULL) != pdPASS) {
+		ESP_LOGE(TAG, "Failed to start wifi_task");
 	}
 }
