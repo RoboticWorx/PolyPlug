@@ -8,7 +8,7 @@
 
 PolyPlug Firmware
 ====================
-Welcome to the official GitHub page for the PolyPlug!
+Welcome to the official GitHub page of the PolyPlug!
 
 PolyPlugs are a open-source smart plugs with **built-in Wi-Fi, Bluetooth, and LoRa**. They also have support for setting schedules, timers, toggles, and modes.
 

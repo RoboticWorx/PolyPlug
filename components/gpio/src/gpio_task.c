@@ -168,6 +168,7 @@ static void plan_mode_task(void *arg) {
 			#ifdef POLYPLUG_DEBUG
 			ESP_LOGI(TAG, "today_enabled: Continuing");
 			#endif
+			
 			continue; // Next cycle
 		}
 		

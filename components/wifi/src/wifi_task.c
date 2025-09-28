@@ -126,7 +126,7 @@ static void wifi_task(void *param)
 
 void wifi_task_create(void)
 {
-	if (xTaskCreate(wifi_task, "wifi_task", 1024 * 3, NULL, tskIDLE_PRIORITY + 1, NULL) != pdPASS) {
+	if (xTaskCreate(wifi_task, "wifi_task", 1024 * 5, NULL, tskIDLE_PRIORITY + 1, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to start wifi_task");
 	}
 }
