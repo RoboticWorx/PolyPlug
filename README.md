@@ -1,6 +1,6 @@
 <p align="center">
   <img
-    src="https://github.com/user-attachments/assets/121b2aa6-88d6-440f-a048-de21f296d5a5"
+    src="https://github.com/user-attachments/assets/df4f895f-26e3-4a4b-8bad-1f733cbcda08"
     alt="PolyPlug"
     width="66%"
   />
