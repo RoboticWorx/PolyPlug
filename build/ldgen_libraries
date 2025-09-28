@@ -38,6 +38,7 @@ C:/Projects/ESP/PolyPlug/build/esp-idf/esp_app_format/libesp_app_format.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/esp_bootloader_format/libesp_bootloader_format.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/esp_mm/libesp_mm.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/efuse/libefuse.a
+C:/Projects/ESP/PolyPlug/build/esp-idf/esp_psram/libesp_psram.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/esp_gdbstub/libesp_gdbstub.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/esp_coex/libesp_coex.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/driver/libdriver.a
@@ -135,6 +136,7 @@ C:/Projects/ESP/PolyPlug/build/esp-idf/http_parser/libhttp_parser.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/esp-tls/libesp-tls.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/esp_adc/libesp_adc.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/esp_driver_cam/libesp_driver_cam.a
+C:/Projects/ESP/PolyPlug/build/esp-idf/esp_psram/libesp_psram.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/esp_eth/libesp_eth.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/esp_hid/libesp_hid.a
 C:/Projects/ESP/PolyPlug/build/esp-idf/tcp_transport/libtcp_transport.a

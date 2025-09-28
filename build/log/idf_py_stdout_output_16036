@@ -1,0 +1,113 @@
+Command: ninja flash
+[1/20] Performing build step for 'bootloader'
+[1/1] C:\Windows\system32\cmd.exe /C "cd /D C:\Projects\ESP\PolyPlug\build\bootloader\esp-idf\esptool_py && C:\Espressif\python_env\idf5.5_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.5/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x2000 C:/Projects/ESP/PolyPlug/build/bootloader/bootloader.bin"
+Bootloader binary size 0x5600 bytes. 0xa00 bytes (10%) free.
+[2/20] No install step for 'bootloader'
+[3/20] Completed 'bootloader'
+[4/20] Building C object esp-idf/gpio/CMakeFiles/__idf_gpio.dir/src/gpio_funcs.c.obj
+[5/20] Building C object esp-idf/lora/CMakeFiles/__idf_lora.dir/src/lora_funcs.c.obj
+[6/20] Building C object esp-idf/espnow/CMakeFiles/__idf_espnow.dir/src/espnow_task.c.obj
+[7/20] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/main.c.obj
+[8/20] Building C object esp-idf/gpio/CMakeFiles/__idf_gpio.dir/src/gpio_task.c.obj
+[9/20] Linking C static library esp-idf\espnow\libespnow.a
+[10/20] Building C object esp-idf/wifi/CMakeFiles/__idf_wifi.dir/src/wifi_funcs.c.obj
+[11/20] Building C object esp-idf/wifi/CMakeFiles/__idf_wifi.dir/src/ota_update.c.obj
+[12/20] Linking C static library esp-idf\wifi\libwifi.a
+[13/20] Linking C static library esp-idf\gpio\libgpio.a
+[14/20] Linking C static library esp-idf\lora\liblora.a
+[15/20] Linking C static library esp-idf\main\libmain.a
+[16/20] Generating esp-idf/esp_system/ld/sections.ld
+[17/20] Linking CXX executable PolyPlug.elf
+[18/20] Generating binary image from built executable
+esptool.py v4.10.dev2
+Creating esp32c5 image...
+Merged 1 ELF section
+Successfully created esp32c5 image.
+Generated C:/Projects/ESP/PolyPlug/build/PolyPlug.bin
+[19/20] C:\Windows\system32\cmd.exe /C "cd /D C:\Projects\ESP\PolyPlug\build\esp-idf\esptool_py && C:\Espressif\python_env\idf5.5_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.5/components/partition_table/check_sizes.py --offset 0x8000 partition --type app C:/Projects/ESP/PolyPlug/build/partition_table/partition-table.bin C:/Projects/ESP/PolyPlug/build/PolyPlug.bin"
+PolyPlug.bin binary size 0x133ab0 bytes. Smallest app partition is 0x3f0000 bytes. 0x2bc550 bytes (69%) free.
+[19/20] C:\Windows\system32\cmd.exe /C "cd /D C:\Espressif\frameworks\esp-idf-v5.5\components\esptool_py && C:\Espressif\tools\cmake\3.30.2\bin\cmake.exe -D IDF_PATH=C:/Espressif/frameworks/esp-idf-v5.5 -D SERIAL_TOOL=C:/Espressif/python_env/idf5.5_py3.11_env/Scripts/python.exe;;C:/Espressif/frameworks/esp-idf-v5.5/components/esptool_py/esptool/esptool.py;--chip;esp32c5 -D SERIAL_TOOL_ARGS=--before=default_reset;--after=hard_reset;write_flash;@flash_args -D WORKING_DIRECTORY=C:/Projects/ESP/PolyPlug/build -P C:/Espressif/frameworks/esp-idf-v5.5/components/esptool_py/run_serial_tool.cmake"
+esptool.py --chip esp32c5 -p COM14 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 80m --flash_size 8MB 0x2000 bootloader/bootloader.bin 0x20000 PolyPlug.bin 0x8000 partition_table/partition-table.bin 0xf000 ota_data_initial.bin
+esptool.py v4.10.dev2
+Serial port COM14
+Connecting...
+Chip is ESP32-C5 (revision v1.0)
+Features: WiFi 6, BT 5, IEEE802.15.4
+Crystal is 48MHz
+MAC: d0:cf:13:ff:fe:e0:16:54
+BASE MAC: d0:cf:13:e0:16:54
+MAC_EXT: ff:fe
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 460800
+Changed.
+Configuring flash size...
+Flash will be erased from 0x00002000 to 0x00007fff...
+Flash will be erased from 0x00020000 to 0x00153fff...
+Flash will be erased from 0x00008000 to 0x00008fff...
+Flash will be erased from 0x0000f000 to 0x00010fff...
+SHA digest in image updated
+Compressed 22016 bytes to 13528...
+Writing at 0x00002000... (100 %)
+Wrote 22016 bytes (13528 compressed) at 0x00002000 in 0.2 seconds (effective 758.1 kbit/s)...
+Hash of data verified.
+Compressed 1260208 bytes to 727677...
+Writing at 0x00020000... (2 %)
+Writing at 0x0002c641... (4 %)
+Writing at 0x00038f9d... (6 %)
+Writing at 0x0003ec16... (8 %)
+Writing at 0x00043ac5... (11 %)
+Writing at 0x00048d47... (13 %)
+Writing at 0x0004fba9... (15 %)
+Writing at 0x00059d90... (17 %)
+Writing at 0x00060dec... (20 %)
+Writing at 0x000681bc... (22 %)
+Writing at 0x0006f6b4... (24 %)
+Writing at 0x00076bf5... (26 %)
+Writing at 0x0007e4d9... (28 %)
+Writing at 0x00085692... (31 %)
+Writing at 0x0008c416... (33 %)
+Writing at 0x00093828... (35 %)
+Writing at 0x0009a916... (37 %)
+Writing at 0x000a1370... (40 %)
+Writing at 0x000a8acd... (42 %)
+Writing at 0x000aff6c... (44 %)
+Writing at 0x000b660c... (46 %)
+Writing at 0x000bce3a... (48 %)
+Writing at 0x000c3da8... (51 %)
+Writing at 0x000ca5d4... (53 %)
+Writing at 0x000d0bba... (55 %)
+Writing at 0x000d743d... (57 %)
+Writing at 0x000dd1c0... (60 %)
+Writing at 0x000e2e22... (62 %)
+Writing at 0x000e8956... (64 %)
+Writing at 0x000eee31... (66 %)
+Writing at 0x000f5451... (68 %)
+Writing at 0x000fb42e... (71 %)
+Writing at 0x00101127... (73 %)
+Writing at 0x00107a88... (75 %)
+Writing at 0x0010dc1c... (77 %)
+Writing at 0x00113c22... (80 %)
+Writing at 0x0011a3d5... (82 %)
+Writing at 0x001202b2... (84 %)
+Writing at 0x00125cd8... (86 %)
+Writing at 0x0012bd13... (88 %)
+Writing at 0x00134463... (91 %)
+Writing at 0x0013bb76... (93 %)
+Writing at 0x00142252... (95 %)
+Writing at 0x00148f2f... (97 %)
+Writing at 0x0014f036... (100 %)
+Wrote 1260208 bytes (727677 compressed) at 0x00020000 in 5.4 seconds (effective 1857.1 kbit/s)...
+Hash of data verified.
+Compressed 3072 bytes to 128...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (128 compressed) at 0x00008000 in 0.1 seconds (effective 238.0 kbit/s)...
+Hash of data verified.
+Compressed 8192 bytes to 31...
+Writing at 0x0000f000... (100 %)
+Wrote 8192 bytes (31 compressed) at 0x0000f000 in 0.1 seconds (effective 628.6 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...

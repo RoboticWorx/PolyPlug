@@ -1,0 +1,23 @@
+Command: ninja all
+[1/14] Performing build step for 'bootloader'
+[1/1] C:\Windows\system32\cmd.exe /C "cd /D C:\Projects\ESP\PolyPlug\build\bootloader\esp-idf\esptool_py && C:\Espressif\python_env\idf5.5_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.5/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x2000 C:/Projects/ESP/PolyPlug/build/bootloader/bootloader.bin"
+Bootloader binary size 0x5580 bytes. 0xa80 bytes (11%) free.
+[2/14] No install step for 'bootloader'
+[3/14] Completed 'bootloader'
+[4/14] Building C object esp-idf/wifi/CMakeFiles/__idf_wifi.dir/src/ota_update.c.obj
+[5/14] Linking C static library esp-idf\wifi\libwifi.a
+[6/14] Linking C static library esp-idf\gpio\libgpio.a
+[7/14] Linking C static library esp-idf\lora\liblora.a
+[8/14] Linking C static library esp-idf\sx126x\libsx126x.a
+[9/14] Linking C static library esp-idf\main\libmain.a
+[10/14] Generating esp-idf/esp_system/ld/sections.ld
+[11/14] Building C object CMakeFiles/PolyPlug.elf.dir/project_elf_src_esp32c5.c.obj
+[12/14] Linking CXX executable PolyPlug.elf
+[13/14] Generating binary image from built executable
+esptool.py v4.10.dev2
+Creating esp32c5 image...
+Merged 1 ELF section
+Successfully created esp32c5 image.
+Generated C:/Projects/ESP/PolyPlug/build/PolyPlug.bin
+[14/14] C:\Windows\system32\cmd.exe /C "cd /D C:\Projects\ESP\PolyPlug\build\esp-idf\esptool_py && C:\Espressif\python_env\idf5.5_py3.11_env\Scripts\python.exe C:/Espressif/frameworks/esp-idf-v5.5/components/partition_table/check_sizes.py --offset 0x8000 partition --type app C:/Projects/ESP/PolyPlug/build/partition_table/partition-table.bin C:/Projects/ESP/PolyPlug/build/PolyPlug.bin"
+PolyPlug.bin binary size 0x111050 bytes. Smallest app partition is 0x700000 bytes. 0x5eefb0 bytes (85%) free.

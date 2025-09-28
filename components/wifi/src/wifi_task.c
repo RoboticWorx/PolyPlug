@@ -1,3 +1,4 @@
+#include "ota_update.h"
 #include "polyplug_macros.h"
 
 #include <string.h>
@@ -9,6 +10,7 @@
 
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "esp_app_desc.h"
 
 #include "wifi_funcs.h"
 #include "wifi_task.h"
@@ -39,6 +41,33 @@ static void wifi_task(void *param)
 	
 	wifi_funcs_wifi_event_init();
 	wifi_funcs_mqtt_client_init();
+	
+	// Let everything else initialize
+	vTaskDelay(pdMS_TO_TICKS(2000));
+
+	// Get here without crashing -> This is a valid OTA app
+	ota_update_mark_app_valid();
+
+	/* Update NVS FW version */
+	// If NVS version doesn't exist yet, set it
+	char dummy[64];
+	if (ota_update_get_nvs_version(dummy, sizeof(dummy)) != ESP_OK) {
+		// Read the current app's version string from the embedded app descriptor
+		const esp_app_desc_t *running = esp_app_get_description();
+		const char *cur = running ? running->version : "";
+		
+		// Save that version to NVS
+		ota_update_set_nvs_version(cur);
+		
+		#ifdef POLYPLUG_DEBUG
+		ESP_LOGW(TAG, "Setting first time FW version: %s", cur);
+		#endif
+	}
+	else {
+		#ifdef POLYPLUG_DEBUG
+		ESP_LOGI(TAG, "Using pre-set PolyPlug FW version '%s'", dummy);
+		#endif
+	}
 	
 	// Try to connect to last known network
 	wifi_mqtt_t prev_network = wifi_funcs_get_prev();

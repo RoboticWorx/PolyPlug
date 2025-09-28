@@ -38,6 +38,7 @@ $<TARGET_FILE:__idf_esp_app_format>
 $<TARGET_FILE:__idf_esp_bootloader_format>
 $<TARGET_FILE:idf::esp_mm>
 $<TARGET_FILE:idf::efuse>
+$<TARGET_FILE:__idf_esp_psram>
 $<TARGET_FILE:__idf_esp_gdbstub>
 $<TARGET_FILE:__idf_esp_coex>
 $<TARGET_FILE:__idf_driver>
@@ -135,6 +136,7 @@ $<TARGET_FILE:idf::http_parser>
 $<TARGET_FILE:idf::esp-tls>
 $<TARGET_FILE:idf::esp_adc>
 $<TARGET_FILE:idf::esp_driver_cam>
+$<TARGET_FILE:idf::esp_psram>
 $<TARGET_FILE:idf::esp_eth>
 $<TARGET_FILE:idf::esp_hid>
 $<TARGET_FILE:idf::tcp_transport>

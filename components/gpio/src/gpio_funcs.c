@@ -212,3 +212,29 @@ void gpio_rgb_wifi_status(bool connected)
 		gpio_set_level(RGB_GREEN_PIN, 0); // Green off
 	}
 }
+
+void gpio_rgb_set(int r_on, int g_on, int b_on)
+{
+	gpio_set_level(RGB_RED_PIN, r_on ? 1 : 0);
+	gpio_set_level(RGB_GREEN_PIN, g_on ? 1 : 0);
+	gpio_set_level(RGB_BLUE_PIN, b_on ? 1 : 0);
+}
+
+void gpio_rgb_cycle_tick(uint32_t period_ms)
+{
+	static uint8_t phase = 0; // 0 = R, 1 = G, 2 = B
+	static TickType_t last = 0;
+
+	TickType_t now = xTaskGetTickCount();
+	if (now - last < pdMS_TO_TICKS(period_ms)) {
+		return; // Not time yet
+	}
+	last = now;
+
+	switch (phase) {
+		case 0: gpio_rgb_set(1,0,0); break; // Red
+		case 1: gpio_rgb_set(0,1,0); break; // Green
+		default: gpio_rgb_set(0,0,1); break; // Blue
+	}
+	phase = (phase + 1) % 3;
+}

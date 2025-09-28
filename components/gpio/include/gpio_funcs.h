@@ -75,4 +75,20 @@ void gpio_rgb_ready_to_rx(bool ready);
  */
 void gpio_rgb_wifi_status(bool connected);
 
+/**
+ * @brief Turn on a specific or multiple RGB LEDs
+ *
+ * @param [in] r_on 0 turns RED off
+ * @param [in] g_on 0 turns GREEN off
+ * @param [in] b_on 0 turns BLUE off
+ */
+void gpio_rgb_set(int r_on, int g_on, int b_on);
+
+/**
+ * @brief Cycles through RGB LEDs: non-blocking
+ *
+ * @param [in] period_ms Period to cycle at in milliseconds
+ */
+void gpio_rgb_cycle_tick(uint32_t period_ms);
+
 #endif // GPIO_FUNCS_H

@@ -1,3 +1,4 @@
+#include "ota_update.h"
 #include "polyplug_macros.h"
 
 #include <string.h>
@@ -200,13 +201,20 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 						ESP_LOGI(TAG, "Parsed payload as %d", value);
 						#endif
 						
-						relay_t relay_tx;						
-						if (value == 1) {
-							relay_tx.index = -1; // Relay ON cmd
+						relay_t relay_tx;
+						// Check for OTA update
+						if (value == 255) {
+							// Check for new firmware version and update if so
+							ota_update_check_start("https://raw.githubusercontent.com/RoboticWorx/pc5-test/main/manifest.json");
+						}
+						// Relay ON cmd
+						else if (value == 1) {
+							relay_tx.index = -1;
 							xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
 						}
+						// Relay OFF cmd
 						else if (value == 0) {
-							relay_tx.index = -2; // Relay OFF cmd
+							relay_tx.index = -2;
 							xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
 						}
 						// Handle other cases here. (Set GPIO pins to correspond to received value)
@@ -246,6 +254,25 @@ void wifi_funcs_mqtt_client_init(void)
 	};
 	mqtt_client = esp_mqtt_client_init(&cfg);
 	esp_mqtt_client_register_event(mqtt_client, MQTT_EVENT_ANY, mqtt_event_handler, NULL);
+}
+
+void wifi_funcs_mqtt_client_destroy(void)
+{
+	if (mqtt_client) {
+		esp_mqtt_client_stop(mqtt_client);
+		esp_mqtt_client_destroy(mqtt_client);
+		mqtt_client = NULL;
+	}
+}
+
+void wifi_funcs_mqtt_client_stop(void)
+{
+	esp_mqtt_client_stop(mqtt_client);
+}
+
+void wifi_funcs_mqtt_client_start(void)
+{
+	esp_mqtt_client_start(mqtt_client);
 }
 
 static bool wait_for_connection(TickType_t timeout)
