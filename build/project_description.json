@@ -1131,7 +1131,7 @@
             "type": "LIBRARY",
             "lib": "__idf_gpio",
             "reqs": [ "common" ],
-            "priv_reqs": [ "lora", "sx126x", "esp_adc", "efuse" ],
+            "priv_reqs": [ "lora", "sx126x", "esp_adc", "efuse", "esp_timer" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "C:/Projects/ESP/PolyPlug/build/esp-idf/gpio/libgpio.a",
@@ -3019,7 +3019,7 @@
             "dir": "C:/Projects/ESP/PolyPlug/components/gpio",
             "lib": "__idf_gpio",
             "reqs": [ "common" ],
-            "priv_reqs": [ "lora", "sx126x", "esp_adc", "efuse" ],
+            "priv_reqs": [ "lora", "sx126x", "esp_adc", "efuse", "esp_timer" ],
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "include_dirs": [ "include" ]

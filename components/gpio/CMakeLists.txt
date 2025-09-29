@@ -13,5 +13,5 @@ idf_component_register(
     	common
     
     PRIV_REQUIRES
-    	lora sx126x esp_adc efuse
+    	lora sx126x esp_adc efuse esp_timer
 )

@@ -11,6 +11,13 @@
 #define RGB_GREEN_PIN 11
 #define RGB_BLUE_PIN 25
 
+// Pin numbering - Left to right from the front on PolyPlug HWv3:
+// GND -> GND -> ADC_AC -> IO4 -> IO27 -> IO23 -> IO24 -> 3V3 -> 3V3 -> 5V
+#define GPIO_BIT_1_PIN 24
+#define GPIO_BIT_2_PIN 23
+#define GPIO_BIT_3_PIN 27
+#define GPIO_BIT_4_PIN 4
+
 #define LOOP_LEN 4
 #define PLAN_DAYS_LEN 8 // 7 days + NULL
 #define PLAN_TIME_LEN 7 // "HHMMSS" + NULL
@@ -24,6 +31,7 @@ typedef struct {
     char plan_off[PLAN_TIME_LEN];
     int away_min;
     int away_max;
+    int gpio_cmd;
 } relay_t;
 
 /**
@@ -90,5 +98,12 @@ void gpio_rgb_set(int r_on, int g_on, int b_on);
  * @param [in] period_ms Period to cycle at in milliseconds
  */
 void gpio_rgb_cycle_tick(uint32_t period_ms);
+
+/**
+ * @brief Writes a given number high in binary via the GPIOs
+ *
+ * @param [in] pulse_ms Period to hold the pins high in milliseconds
+ */
+void gpio_pulse_4bit_bus(uint8_t value, uint32_t pulse_ms);
 
 #endif // GPIO_FUNCS_H

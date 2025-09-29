@@ -381,6 +381,18 @@ static void gpio_task(void *arg)
 					}
 				}
 			}
+			// GPIO command
+			else if (relay_rx.index == 4) {
+				#ifdef POLYPLUG_DEBUG
+				ESP_LOGI(TAG, "Got GPIO cmd: %d", relay_rx.gpio_cmd);
+				#endif
+				
+				// Only low-nibble is meaningful (IO4...IO24 = 4 bits)
+				uint8_t nibble = (uint8_t)relay_rx.gpio_cmd & 0x0F; // 0-255 possible
+			
+				// 100 ms pulse showing the value in binary via the GPIOs
+				gpio_pulse_4bit_bus(nibble, 100);
+			}
 		}
 			
 		vTaskDelay(pdMS_TO_TICKS(10));

@@ -185,6 +185,7 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 			else if (cmd == 3) {
 				int away_min, away_max;
 				
+				// Try to scan out the instruction
 				if (sscanf(instr_buf, "away %d-%dm", &away_min, &away_max) == 2) {
 					#ifdef POLYPLUG_DEBUG
 					ESP_LOGI(TAG, "Parsed away range: %d to %d minutes", away_min, away_max);
@@ -200,6 +201,27 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 				}
 				else {
 					ESP_LOGE(TAG, "Bad away args: \"%s\"", instr_buf);
+				}
+			}
+			// GPIO mode
+			else if (cmd == 4) {
+				int gpio_cmd;
+				
+				// Try to scan out the instruction
+				if (sscanf(instr_buf, "gpio %d", &gpio_cmd) == 1) {
+					#ifdef POLYPLUG_DEBUG
+					ESP_LOGI(TAG, "Parsed GPIO command: %d", gpio_cmd);
+					#endif
+					
+					// Save and send
+					relay_tx.gpio_cmd = gpio_cmd;
+					xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+					
+					// Send receipt
+					valid_data_rec = true;
+				}
+				else {
+					ESP_LOGE(TAG, "Bad GPIO args: \"%s\"", instr_buf);
 				}
 			}
 			else {

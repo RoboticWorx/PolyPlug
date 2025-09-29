@@ -7,8 +7,10 @@
 
 #include "esp_log.h"
 #include "esp_random.h"
+#include "esp_timer.h"
 
 #include "gpio_funcs.h"
+#include "freertos/projdefs.h"
 #include "gpio_task.h"
 
 #include "lora_task.h"
@@ -25,6 +27,9 @@ spi_device_handle_t spi_sx126x; // For SX126x
 
 // Global SX126x instance
 sx126x_t sx126x;
+
+// One-shot binary GPIO output timer
+static esp_timer_handle_t gpio_out_pulse_timer = NULL;
 
 static bool relay_on = false;
 
@@ -69,9 +74,15 @@ void gpio_init(void)
 	// Configure outputs
 	gpio_config_t io_conf_out = {
 		.pin_bit_mask = (1ULL << RELAY_PIN) |
+						// RGB
 						(1ULL << RGB_RED_PIN) |
 						(1ULL << RGB_GREEN_PIN) |
-						(1ULL << RGB_BLUE_PIN),
+						(1ULL << RGB_BLUE_PIN) |
+						// GPIO
+						(1ULL << GPIO_BIT_1_PIN) |
+						(1ULL << GPIO_BIT_2_PIN) |
+						(1ULL << GPIO_BIT_3_PIN) |
+						(1ULL << GPIO_BIT_4_PIN),
 		.mode = GPIO_MODE_OUTPUT,
 		.pull_up_en = GPIO_PULLUP_DISABLE,
 		.pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -79,7 +90,17 @@ void gpio_init(void)
 	};
 	gpio_config(&io_conf_out);
 	
+	// Ensure outputs start low
 	gpio_set_level(RELAY_PIN, 0);
+	
+	gpio_set_level(RGB_RED_PIN, 0);
+	gpio_set_level(RGB_GREEN_PIN, 0);
+	gpio_set_level(RGB_BLUE_PIN, 0);
+	
+	gpio_set_level(GPIO_BIT_1_PIN, 0);
+	gpio_set_level(GPIO_BIT_2_PIN, 0);
+	gpio_set_level(GPIO_BIT_3_PIN, 0);
+	gpio_set_level(GPIO_BIT_4_PIN, 0);
 	
 	// Configure inputs
 	gpio_config_t io_conf_in = {
@@ -232,9 +253,48 @@ void gpio_rgb_cycle_tick(uint32_t period_ms)
 	last = now;
 
 	switch (phase) {
-		case 0: gpio_rgb_set(1,0,0); break; // Red
-		case 1: gpio_rgb_set(0,1,0); break; // Green
-		default: gpio_rgb_set(0,0,1); break; // Blue
+		case 0: gpio_rgb_set(1, 0, 0); break; // Red
+		case 1: gpio_rgb_set(0, 1, 0); break; // Green
+		default: gpio_rgb_set(0, 0, 1); break; // Blue
 	}
 	phase = (phase + 1) % 3;
+}
+
+static void gpio_bus_timeout_cb(void *arg) {
+	// Clear all lines low when the timer fires
+	gpio_set_level(GPIO_BIT_1_PIN, 0); // LSB
+	gpio_set_level(GPIO_BIT_2_PIN, 0);
+	gpio_set_level(GPIO_BIT_3_PIN, 0);
+	gpio_set_level(GPIO_BIT_4_PIN, 0); // MSB
+}
+
+void gpio_pulse_4bit_bus(uint8_t value, uint32_t pulse_ms)
+{
+	// Create the one-shot timer
+	if (gpio_out_pulse_timer == NULL) {
+		const esp_timer_create_args_t args = {
+			.callback = gpio_bus_timeout_cb,
+			.arg = NULL,
+			.dispatch_method = ESP_TIMER_TASK,
+			.name = "gpioOutBin"
+		};
+		ESP_ERROR_CHECK(esp_timer_create(&args, &gpio_out_pulse_timer));
+	}
+
+	// If a previous pulse is active, stop it (replacing)
+	if (esp_timer_is_active(gpio_out_pulse_timer)) {
+		ESP_ERROR_CHECK(esp_timer_stop(gpio_out_pulse_timer));
+	}
+
+	// Use only the low nibble (maps LSB -> MSB)
+	uint8_t nibble = value & 0x0F;
+
+	// Drive highs/lows together to minimize skew
+	gpio_set_level(GPIO_BIT_1_PIN, (nibble >> 0) & 1); // Bit0
+	gpio_set_level(GPIO_BIT_2_PIN, (nibble >> 1) & 1); // Bit1
+	gpio_set_level(GPIO_BIT_3_PIN, (nibble >> 2) & 1); // Bit2
+	gpio_set_level(GPIO_BIT_4_PIN, (nibble >> 3) & 1); // Bit3
+
+	// Arm one-shot to clear after pulse_ms
+	ESP_ERROR_CHECK(esp_timer_start_once(gpio_out_pulse_timer, (uint64_t)pulse_ms * 1000ULL));
 }
