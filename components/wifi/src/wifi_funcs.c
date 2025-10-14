@@ -644,7 +644,18 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 							relay_tx.index = -2;
 							xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
 						}
-						// Handle other cases here. (Set GPIO pins to correspond to received value)
+						// GPIO toggle
+						else {
+							relay_tx.index = 4; // GPIO
+				
+							#ifdef POLYPLUG_DEBUG
+							ESP_LOGI(TAG, "Parsed Wi-Fi GPIO command: %d", value);
+							#endif
+							
+							// Save and send
+							relay_tx.gpio_cmd = value;
+							xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+						}
 					}
 					else {
 						#ifdef POLYPLUG_DEBUG

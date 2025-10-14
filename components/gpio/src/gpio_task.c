@@ -292,7 +292,7 @@ static void gpio_task(void *arg)
 					}
 				}
 			}
-			// Plan mode
+			// LoRa Plan mode
 			else if (relay_rx.index == 2) {				
 				if (plan_count < MAX_PLANS) {
 					relay_t *plan = malloc(sizeof(*plan));
@@ -320,7 +320,7 @@ static void gpio_task(void *arg)
 				ESP_LOGI(TAG, "All plan tasks cleared");
 				*/
 			}
-			// Away mode
+			// LoRa Away mode
 			else if (relay_rx.index == 3) {
 				int min_m = relay_rx.away_min;
 				int max_m = relay_rx.away_max;
@@ -394,7 +394,7 @@ static void gpio_task(void *arg)
 				gpio_pulse_4bit_bus(nibble, 100);
 			}
 		}
-			
+		
 		vTaskDelay(pdMS_TO_TICKS(10));
 	}
 }

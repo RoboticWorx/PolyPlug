@@ -102,7 +102,7 @@ void gpio_rgb_cycle_tick(uint32_t period_ms);
 /**
  * @brief Writes a given number high in binary via the GPIOs
  *
- * @param [in] pulse_ms Period to hold the pins high in milliseconds
+ * @param [in] pulse_ms Period to hold the pins high in milliseconds (non-blocking)
  */
 void gpio_pulse_4bit_bus(uint8_t value, uint32_t pulse_ms);
 
