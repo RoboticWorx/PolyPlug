@@ -3,24 +3,29 @@
 
 #include "freertos/FreeRTOS.h"
 
-#define RELAY_PIN 26
-#define PAIR_BTN1_PIN 10
-#define PAIR_BTN2_PIN 9
+#define RELAY_PIN 25
+#define PAIR_BTN1_PIN 6
+#define PAIR_BTN2_PIN 7
 
-#define RGB_RED_PIN 12
-#define RGB_GREEN_PIN 11
-#define RGB_BLUE_PIN 25
+#define RGB_RED_PIN 8
+#define RGB_GREEN_PIN 9
+#define RGB_BLUE_PIN 10
 
 // Pin numbering - Left to right from the front on PolyPlug HWv3:
 // GND -> GND -> ADC_AC -> IO4 -> IO27 -> IO23 -> IO24 -> 3V3 -> 3V3 -> 5V
-#define GPIO_BIT_1_PIN 24
-#define GPIO_BIT_2_PIN 23
-#define GPIO_BIT_3_PIN 27
-#define GPIO_BIT_4_PIN 4
+#define GPIO_BIT_1_PIN 1
+#define GPIO_BIT_2_PIN 0
+#define GPIO_BIT_3_PIN 3
+#define GPIO_BIT_4_PIN 2
+#define GPIO_BIT_5_PIN 26
 
 #define LOOP_LEN 4
 #define PLAN_DAYS_LEN 8 // 7 days + NULL
 #define PLAN_TIME_LEN 7 // "HHMMSS" + NULL
+
+#define SPI_MOSI_PIN 24
+#define SPI_SCLK_PIN 12
+#define SPI_MISO_PIN 23
 
 typedef struct {
 	int index;

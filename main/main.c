@@ -35,7 +35,7 @@ void app_main(void) {
     // Error check
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
 		#ifdef POLYPLUG_DEBUG
-	        ESP_LOGW(TAG, "Erasing NVS partition...");
+	    ESP_LOGW(TAG, "Erasing NVS partition...");
         #endif
         ESP_ERROR_CHECK(nvs_flash_erase());
         ret = nvs_flash_init();
@@ -43,7 +43,7 @@ void app_main(void) {
     
     ESP_ERROR_CHECK(ret);
     #ifdef POLYPLUG_DEBUG
-	    ESP_LOGI(TAG, "NVS initialized");
+	ESP_LOGI(TAG, "NVS initialized");
     #endif
 	
 	// Allocate Wi-Fi buffers now without fragmentation
@@ -61,6 +61,6 @@ void app_main(void) {
 	wifi_task_create();
 
 	#ifdef POLYPLUG_DEBUG
-		ESP_LOGI(TAG, "Main initialized and tasks created");
+	ESP_LOGI(TAG, "Main initialized and tasks created");
 	#endif
 }

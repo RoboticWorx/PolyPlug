@@ -18,10 +18,6 @@
 #define ADC_CH ADC_CHANNEL_4
 #define NUM_ADC_SAMPLES 16384
 
-#define SPI_MOSI_PIN 7 // Shared MOSI
-#define SPI_SCLK_PIN 6 // Shared SCLK
-#define SPI_MISO_PIN 2 // MISO for SX126x (optional for ST7789)
-
 // SPI device handles
 spi_device_handle_t spi_sx126x; // For SX126x
 
@@ -82,7 +78,8 @@ void gpio_init(void)
 						(1ULL << GPIO_BIT_1_PIN) |
 						(1ULL << GPIO_BIT_2_PIN) |
 						(1ULL << GPIO_BIT_3_PIN) |
-						(1ULL << GPIO_BIT_4_PIN),
+						(1ULL << GPIO_BIT_4_PIN) |
+						(1ULL << GPIO_BIT_5_PIN),
 		.mode = GPIO_MODE_OUTPUT,
 		.pull_up_en = GPIO_PULLUP_DISABLE,
 		.pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -101,14 +98,15 @@ void gpio_init(void)
 	gpio_set_level(GPIO_BIT_2_PIN, 0);
 	gpio_set_level(GPIO_BIT_3_PIN, 0);
 	gpio_set_level(GPIO_BIT_4_PIN, 0);
-	
+	gpio_set_level(GPIO_BIT_5_PIN, 0);
+
 	// Configure inputs
 	gpio_config_t io_conf_in = {
 		.pin_bit_mask = (1ULL << PAIR_BTN1_PIN) |
 						(1ULL << PAIR_BTN2_PIN),
 		.mode = GPIO_MODE_INPUT,
 		.intr_type = GPIO_INTR_DISABLE,
-		.pull_up_en = GPIO_PULLUP_ENABLE,
+		.pull_up_en = GPIO_PULLUP_DISABLE,
 		.pull_down_en = GPIO_PULLDOWN_DISABLE,
 	};
 	gpio_config(&io_conf_in);
