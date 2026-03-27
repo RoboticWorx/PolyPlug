@@ -10,7 +10,7 @@ idf_component_register(
     	"include"
     
     REQUIRES
-    	common
+    	common esp_driver_gpio esp_driver_spi
     
     PRIV_REQUIRES
     	lora

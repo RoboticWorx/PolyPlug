@@ -737,7 +737,7 @@ esp_err_t wifi_funcs_connect(void)
 {
 	// Make sure there is something to connect to
 	wifi_config_t cfg;
-	ESP_ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &cfg));
+	ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &cfg));
 	if (cfg.sta.ssid[0] == '\0') {
 		return ESP_OK;
 	}
@@ -791,7 +791,7 @@ esp_err_t wifi_funcs_set_config(const char *ssid, const uint8_t* bssid, const ch
 	#endif
 	
 	// Set config
-	esp_err_t err = esp_wifi_set_config(ESP_IF_WIFI_STA, &cfg);
+	esp_err_t err = esp_wifi_set_config(WIFI_IF_STA, &cfg);
 	if (err != ESP_OK) {
 		return err;
 	}
@@ -802,7 +802,7 @@ esp_err_t wifi_funcs_set_config(const char *ssid, const uint8_t* bssid, const ch
 wifi_mqtt_t wifi_funcs_get_prev(void)
 {
 	wifi_config_t current;
-	ESP_ERROR_CHECK(esp_wifi_get_config(ESP_IF_WIFI_STA, &current));
+	ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &current));
 	
 	wifi_mqtt_t prev;
 	strlcpy(prev.ssid, (char*)current.sta.ssid, sizeof(current.sta.ssid));

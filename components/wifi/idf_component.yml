@@ -1,0 +1,5 @@
+dependencies:
+  espressif/mqtt:
+    version: "*"
+  espressif/cjson:
+    version: "^1.7.0"

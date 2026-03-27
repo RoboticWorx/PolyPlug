@@ -13,5 +13,5 @@ idf_component_register(
     	common
     
     PRIV_REQUIRES
-    	 esp_wifi esp_netif gpio wifi
+    	 esp_wifi esp_netif esp_driver_gpio gpio wifi
 )
