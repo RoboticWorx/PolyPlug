@@ -21,7 +21,8 @@ static void lora_event_handler_task(void *pvParameters);
 static uint8_t enc_key_buf[ENC_KEY_LEN] = {0};
 
 // ISR handler for DIO1
-static void IRAM_ATTR dio1_isr_handler(void *arg) {
+static void IRAM_ATTR dio1_isr_handler(void *arg)
+{
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 	// Signal the event handler task
@@ -30,8 +31,8 @@ static void IRAM_ATTR dio1_isr_handler(void *arg) {
 }
 
 // LoRa Task
-static void lora_task(void *pvParameters) {
-	
+static void lora_task(void *pvParameters)
+{
 	// Create the semaphore for LoRa events
 	xLoraEventSemaphore = xSemaphoreCreateBinary();
 	if (xLoraEventSemaphore == NULL) {
@@ -61,7 +62,7 @@ static void lora_task(void *pvParameters) {
 	sx126x_pkt_params_lora_t lora_pkt_params = {
 		.preamble_len_in_symb = 12,
 		.header_type = SX126X_LORA_PKT_EXPLICIT,
-		.pld_len_in_bytes = PAYLOAD_LENGTH,
+		.pld_len_in_bytes = LORA_PAYLOAD_LENGTH,
 		.crc_is_on = true,
 		.invert_iq_is_on = false,
 	};
@@ -148,8 +149,8 @@ static void lora_task(void *pvParameters) {
 	}
 
 	status = sx126x_set_dio_irq_params(
-		  NULL,
-		 SX126X_IRQ_ALL, // Enable all IRQs
+		NULL,
+		SX126X_IRQ_ALL, // Enable all IRQs
 		SX126X_IRQ_TX_DONE | SX126X_IRQ_RX_DONE | SX126X_IRQ_TIMEOUT | SX126X_IRQ_HEADER_ERROR | SX126X_IRQ_CRC_ERROR, // Enable IRQ finished
 		SX126X_IRQ_NONE, // No IRQs mapped to DIO2
 		SX126X_IRQ_NONE // No IRQs mapped to DIO3
@@ -174,8 +175,7 @@ static void lora_task(void *pvParameters) {
 	
 	lora_set_rx_mode(); // Listen for receipt from receiver
 	
-	for (;;) {
-		
+	while (1) {
 		if (xQueueReceive(xEspReceivedEncKeyQueue, enc_key_buf, 1)) {
 			lora_set_key(enc_key_buf);
 		}
@@ -185,9 +185,9 @@ static void lora_task(void *pvParameters) {
 	}
 }
 
-static void lora_event_handler_task(void *pvParameters) {
-	
-	for (;;) {
+static void lora_event_handler_task(void *pvParameters)
+{
+	while (1) {
 		// Wait for an event from the ISR
 		if (xSemaphoreTake(xLoraEventSemaphore, portMAX_DELAY) == pdTRUE) {
 			// Check IRQ flags
@@ -206,7 +206,7 @@ static void lora_event_handler_task(void *pvParameters) {
 			else if (irq_flags & SX126X_IRQ_RX_DONE) {
 				// Read the received packet
 				
-				uint8_t rx_buffer[PAYLOAD_LENGTH];
+				uint8_t rx_buffer[LORA_PAYLOAD_LENGTH];
 				uint8_t rx_size = 0;
 				
 				sx126x_rx_buffer_status_t rx_status;
@@ -286,7 +286,8 @@ static void lora_event_handler_task(void *pvParameters) {
 }
 
 // Function to create the LoRa task
-void lora_task_create(void) {
+void lora_task_create(void)
+{
 	// Create the LoRa task
 	if (xTaskCreate(lora_task, "lora_task", 1024 * 2, NULL, tskIDLE_PRIORITY + 1, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create lora_task");

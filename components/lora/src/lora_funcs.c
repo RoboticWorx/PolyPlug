@@ -42,7 +42,7 @@ void lora_set_rx_mode(void) // Call once to set RX mode and receive on EXTI8
 	sx126x_pkt_params_lora_t pkt_params = {
 		.preamble_len_in_symb = 12,
 		.header_type = SX126X_LORA_PKT_EXPLICIT,
-		.pld_len_in_bytes = PAYLOAD_LENGTH,
+		.pld_len_in_bytes = LORA_PAYLOAD_LENGTH,
 		.crc_is_on = true,
 		.invert_iq_is_on = false,
 	};
@@ -95,9 +95,10 @@ void lora_tx(uint8_t tx_data[], uint8_t data_len)
 	}
 }
 
-void lora_process_received_message(uint8_t *message, size_t message_len) {
+void lora_process_received_message(uint8_t *message, size_t message_len)
+{
 	// Minimum: 16 bytes IV + 16 bytes ciphertext (one AES block)
-	if (message_len < IV_LENGTH + 16) {
+	if (message_len < LORA_IV_LENGTH + LORA_ACK_CIPHERTEXT_LEN) {
 		#ifdef POLYPLUG_DEBUG
 		ESP_LOGI(TAG, "Received message too short!");
 		#endif
@@ -105,10 +106,10 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 		return;
 	}
 
-	size_t ct_len = message_len - IV_LENGTH;
+	size_t ct_len = message_len - LORA_IV_LENGTH;
 
 	// Ciphertext must be a multiple of 16 (AES block size) and within max
-	if ((ct_len % 16) != 0 || ct_len > CYPHERTEXT_LENGTH) {
+	if ((ct_len % 16) != 0 || ct_len > LORA_CYPHERTEXT_LENGTH) {
 		#ifdef POLYPLUG_DEBUG
 		ESP_LOGI(TAG, "Invalid ciphertext length: %u bytes\n", (unsigned)ct_len);
 		#endif
@@ -116,11 +117,11 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 		return;
 	}
 
-	uint8_t iv[IV_LENGTH]; // To hold IV
-	memcpy(iv, message, IV_LENGTH); // Extract the IV (first 16 bytes)
+	uint8_t iv[LORA_IV_LENGTH]; // To hold IV
+	memcpy(iv, message, LORA_IV_LENGTH); // Extract the IV (first 16 bytes)
 
-	uint8_t ciphertext[CYPHERTEXT_LENGTH] = {0}; // To hold cyphertext
-	memcpy(ciphertext, IV_LENGTH + message, ct_len); // Extract the ciphertext
+	uint8_t ciphertext[LORA_CYPHERTEXT_LENGTH] = {0}; // To hold cyphertext
+	memcpy(ciphertext, LORA_IV_LENGTH + message, ct_len); // Extract the ciphertext
 
 	// Initialize the AES context with the key and received IV
 	struct AES_ctx ctx;
@@ -145,7 +146,7 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 
 	uint8_t msg_type = ciphertext[2];
 
-	if (msg_type != LORA_MSG_COMMAND || ct_len != CMD_CIPHERTEXT_LEN) {
+	if (msg_type != LORA_MSG_COMMAND || ct_len != LORA_CMD_CIPHERTEXT_LEN) {
 		#ifdef POLYPLUG_DEBUG
 		ESP_LOGW(TAG, "Bad type (0x%02X) or length (%u)", msg_type, (unsigned)ct_len);
 		#endif
@@ -287,7 +288,7 @@ void lora_process_received_message(uint8_t *message, size_t message_len) {
 	}
 }
 
-void lora_send_receipt()
+void lora_send_receipt(void)
 {
 	if (valid_data_rec) {
 		// Build binary ACK
@@ -318,18 +319,18 @@ void lora_encrypt_and_transmit(uint8_t plaintext[], size_t plaintext_len)
 	size_t padded_len = ((plaintext_len + 15) / 16) * 16;
 
 	// Check length
-	if (padded_len > CYPHERTEXT_LENGTH) {
+	if (padded_len > LORA_CYPHERTEXT_LENGTH) {
 		ESP_LOGE(TAG, "LoRa plaintext too long (%u bytes, padded %u), max is %u",
 			(unsigned)plaintext_len,
 			(unsigned)padded_len,
-			(unsigned)CYPHERTEXT_LENGTH);
+			(unsigned)LORA_CYPHERTEXT_LENGTH);
 		return;
 	}
 
-	uint8_t buffer[CYPHERTEXT_LENGTH] = {0}; // Zero-padded for AES block alignment
+	uint8_t buffer[LORA_CYPHERTEXT_LENGTH] = {0}; // Zero-padded for AES block alignment
 	memcpy(buffer, plaintext, plaintext_len); // Copy only the actual data
 
-	uint8_t iv[IV_LENGTH]; // To hold IV
+	uint8_t iv[LORA_IV_LENGTH]; // To hold IV
 	generate_random_iv(iv, sizeof(iv)); // Generate random IV into iv[16]
 
 	struct AES_ctx ctx;
@@ -337,10 +338,10 @@ void lora_encrypt_and_transmit(uint8_t plaintext[], size_t plaintext_len)
 
 	AES_CBC_encrypt_buffer(&ctx, buffer, padded_len); // Encrypt padded data
 
-	uint8_t message[IV_LENGTH + CYPHERTEXT_LENGTH]; // Buffer to send
-	memcpy(message, iv, IV_LENGTH); // First 16 bytes is IV
-	memcpy(IV_LENGTH + message, buffer, padded_len); // Next is the cyphertext
+	uint8_t message[LORA_IV_LENGTH + LORA_CYPHERTEXT_LENGTH]; // Buffer to send
+	memcpy(message, iv, LORA_IV_LENGTH); // First 16 bytes is IV
+	memcpy(LORA_IV_LENGTH + message, buffer, padded_len); // Next is the cyphertext
 
-	lora_tx(message, IV_LENGTH + padded_len); // Send the data
+	lora_tx(message, LORA_IV_LENGTH + padded_len); // Send the data
 }
 
