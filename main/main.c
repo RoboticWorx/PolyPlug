@@ -26,8 +26,8 @@
 // Logging tag
 static const char *TAG = "MAIN";
 
-void app_main(void) {
-	
+void app_main(void)
+{
 	esp_err_t ret = nvs_flash_init();
 	
 	//nvs_flash_erase();

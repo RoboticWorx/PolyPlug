@@ -11,8 +11,6 @@
 #define RGB_GREEN_PIN 9
 #define RGB_BLUE_PIN 10
 
-// Pin numbering - Left to right from the front on PolyPlug HWv3:
-// GND -> GND -> ADC_AC -> IO4 -> IO27 -> IO23 -> IO24 -> 3V3 -> 3V3 -> 5V
 #define GPIO_BIT_1_PIN 1
 #define GPIO_BIT_2_PIN 0
 #define GPIO_BIT_3_PIN 3
