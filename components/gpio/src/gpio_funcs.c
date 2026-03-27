@@ -13,7 +13,7 @@
 #include "freertos/projdefs.h"
 #include "gpio_task.h"
 
-#include "lora_task.h"
+#include "lora_radio.h"
 
 #define ADC_CH ADC_CHANNEL_4
 #define NUM_ADC_SAMPLES 16384

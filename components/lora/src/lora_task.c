@@ -9,7 +9,8 @@
 
 #include "sx126x.h"
 #include "lora_task.h"
-#include "lora_funcs.h"
+#include "lora_pcp.h"
+#include "lora_radio.h"
 
 static const char *TAG = "LORA_TASK";
 
@@ -62,7 +63,7 @@ static void lora_task(void *pvParameters)
 	sx126x_pkt_params_lora_t lora_pkt_params = {
 		.preamble_len_in_symb = 12,
 		.header_type = SX126X_LORA_PKT_EXPLICIT,
-		.pld_len_in_bytes = LORA_PAYLOAD_LENGTH,
+		.pld_len_in_bytes = LORA_PCP_PAYLOAD_LENGTH,
 		.crc_is_on = true,
 		.invert_iq_is_on = false,
 	};
@@ -173,11 +174,11 @@ static void lora_task(void *pvParameters)
 	gpio_install_isr_service(0);
 	gpio_isr_handler_add(SX126X_DIO1_PIN, dio1_isr_handler, NULL);
 	
-	lora_set_rx_mode(); // Listen for receipt from receiver
-	
+	lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH); // Listen for receipt from receiver
+
 	while (1) {
 		if (xQueueReceive(xEspReceivedEncKeyQueue, enc_key_buf, 1)) {
-			lora_set_key(enc_key_buf);
+			lora_pcp_set_key(enc_key_buf);
 		}
 		//ESP_LOG_BUFFER_HEX("CURRENT KEY", enc_key_buf, ENC_KEY_LEN);
 
@@ -200,13 +201,13 @@ static void lora_event_handler_task(void *pvParameters)
 				ESP_LOGI(TAG, "Transmission completed");
 				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_TX_DONE);
-				lora_set_rx_mode(); // Prepare to receive next transmission
+				lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH); // Prepare to receive next transmission
 			}
 			// Else if receive complete
 			else if (irq_flags & SX126X_IRQ_RX_DONE) {
 				// Read the received packet
 				
-				uint8_t rx_buffer[LORA_PAYLOAD_LENGTH];
+				uint8_t rx_buffer[LORA_PCP_PAYLOAD_LENGTH];
 				uint8_t rx_size = 0;
 				
 				sx126x_rx_buffer_status_t rx_status;
@@ -223,7 +224,7 @@ static void lora_event_handler_task(void *pvParameters)
 					ESP_LOGW(TAG, "Invalid RX size %d, discarding", rx_size);
 					#endif
 					sx126x_clear_irq_status(NULL, SX126X_IRQ_RX_DONE);
-					lora_set_rx_mode();
+					lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
 					continue;
 				}
 
@@ -235,7 +236,7 @@ static void lora_event_handler_task(void *pvParameters)
 				#endif
 
 				// Process received
-				lora_process_received_message(rx_buffer, rx_size);
+				lora_pcp_process_received_message(rx_buffer, rx_size);
 				
 				// Log RSSI
 				#ifdef POLYPLUG_DEBUG
@@ -255,7 +256,7 @@ static void lora_event_handler_task(void *pvParameters)
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_RX_DONE);
 				
 				// Send a receipt to confirm with sender if data was valid
-				lora_send_receipt();
+				lora_pcp_send_receipt();
 			}
 
 			if (irq_flags & SX126X_IRQ_TIMEOUT) {
@@ -263,7 +264,7 @@ static void lora_event_handler_task(void *pvParameters)
 				ESP_LOGW(TAG, "RX timeout occurred");
 				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_TIMEOUT);
-				lora_set_rx_mode(); // Reset RX
+				lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH); // Reset RX
 			}
 
 			if (irq_flags & SX126X_IRQ_HEADER_ERROR) {
@@ -271,7 +272,7 @@ static void lora_event_handler_task(void *pvParameters)
 				ESP_LOGE(TAG, "Header error in received packet");
 				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_HEADER_ERROR);
-				lora_set_rx_mode(); // Reset RX
+				lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH); // Reset RX
 			}
 
 			if (irq_flags & SX126X_IRQ_CRC_ERROR) {
@@ -279,7 +280,7 @@ static void lora_event_handler_task(void *pvParameters)
 				ESP_LOGE(TAG, "CRC error in received packet");
 				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_CRC_ERROR);
-				lora_set_rx_mode(); // Reset RX
+				lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH); // Reset RX
 			}
 		}
 	}
