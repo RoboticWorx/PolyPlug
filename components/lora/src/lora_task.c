@@ -217,6 +217,16 @@ static void lora_event_handler_task(void *pvParameters) {
 				// Get size of packet
 				rx_size = rx_status.pld_len_in_bytes;
 
+				// Validate size
+				if (rx_size == 0 || rx_size > sizeof(rx_buffer)) {
+					#ifdef POLYPLUG_DEBUG
+					ESP_LOGW(TAG, "Invalid RX size %d, discarding", rx_size);
+					#endif
+					sx126x_clear_irq_status(NULL, SX126X_IRQ_RX_DONE);
+					lora_set_rx_mode();
+					continue;
+				}
+
 				// Read data into buffer
 				sx126x_read_buffer(NULL, rx_status.buffer_start_pointer, rx_buffer, rx_size);
 
@@ -228,27 +238,24 @@ static void lora_event_handler_task(void *pvParameters) {
 				lora_process_received_message(rx_buffer, rx_size);
 				
 				// Log RSSI
+				#ifdef POLYPLUG_DEBUG
 				sx126x_pkt_status_lora_t pkt_status;
 				if (sx126x_get_lora_pkt_status(NULL, &pkt_status) == SX126X_STATUS_OK) {
-					#ifdef POLYPLUG_DEBUG
 					ESP_LOGI(TAG, "Packet RSSI: %d dBm, SignalRSSI: %d dBm, SNR: %d dB",
 							pkt_status.rssi_pkt_in_dbm,
 							pkt_status.signal_rssi_pkt_in_dbm,
 							pkt_status.snr_pkt_in_db);
-					#endif
 				}
 				else {
-					#ifdef POLYPLUG_DEBUG
 					ESP_LOGW(TAG, "Failed to get packet status");
-					#endif
 				}
+				#endif
 
 				// Clear IRQ
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_RX_DONE);
 				
 				// Send a receipt to confirm with sender if data was valid
 				lora_send_receipt();
-
 			}
 
 			if (irq_flags & SX126X_IRQ_TIMEOUT) {
