@@ -1,4 +1,4 @@
-// Behold, PolyCast5's very own LoRa protocol: the Poly Cipher Protocol (PCP)!
+//    Behold, PolyCast5's very own LoRa protocol: the Poly Cipher Protocol (PCP)!
 // ┌──────────────────────────────────────────────────────────────────────────────┐
 // │         Poly Cipher Protocol (PCP) — AES-128-CBC, Explicit Header            │
 // ├──────────────────────────────────────────────────────────────────────────────┤
@@ -8,7 +8,7 @@
 // │   Random IV    ├────────┬──────┬──────────┬───────┬────────────┬─────────────┤
 // │                │ Magic  │ Type │  Msg ID  │ Index │   Instr    │  Zero Pad   │
 // │                │   2B   │  1B  │    4B    │  1B   │    32B     │     8B      │
-// │                │ 0x5043 │ 0x01 │ uint32   │ uint8 │ char[32]   │  (AES pad)  │
+// │                │ 0x5043 │ 0x01 │  uint32  │ uint8 │  char[32]  │  (AES pad)  │
 // ├────────────────┴────────┴──────┴──────────┴───────┴────────────┴─────────────┤
 // │                        ACK Packet (32 bytes on air)                          │
 // ├────────────────┬─────────────────────────────────────────────────────────────┤
@@ -29,6 +29,7 @@
 
 #define LORA_PCP_IV_LENGTH 16
 #define LORA_PCP_INSTR_MAX_LEN 32
+#define LORA_PCP_ENC_KEY_LEN 16
 
 // Binary wire protocol
 #define LORA_PCP_MAGIC   0x5043 // "PC" - brute-force guard
@@ -60,7 +61,13 @@ typedef struct __attribute__((packed)) {
 #define LORA_PCP_PAYLOAD_LENGTH    (LORA_PCP_CIPHERTEXT_LENGTH + LORA_PCP_IV_LENGTH)
 
 /**
- * @brief Sets the encryption key for PCP
+ * @brief Loads persisted replay counter from NVS and creates a mutex
+ * 		  for synchronizing access to replay counter and valid data marker.
+ */
+void lora_pcp_init(void);
+
+/**
+ * @brief Sets the encryption key for PCP and resets the replay counter
  *
  * @param [in] key The encryption key to set
  */

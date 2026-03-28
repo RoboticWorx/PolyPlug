@@ -19,7 +19,7 @@ static SemaphoreHandle_t xTXDoneSemaphore;
 
 static void lora_event_handler_task(void *pvParameters);
 
-static uint8_t enc_key_buf[ENC_KEY_LEN] = {0};
+static uint8_t enc_key_buf[LORA_PCP_ENC_KEY_LEN] = {0};
 
 // ISR handler for DIO1
 static void IRAM_ATTR dio1_isr_handler(void *arg)
@@ -48,7 +48,6 @@ static void lora_task(void *pvParameters)
 	configASSERT(xTXDoneSemaphore);
 
 	// Create the LoRa event handler task
-	
 	if (xTaskCreate(lora_event_handler_task, "lora_event_handler", 1024 * 3, NULL, tskIDLE_PRIORITY + 3, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create lora_event_handler_task");
 	}
@@ -174,13 +173,15 @@ static void lora_task(void *pvParameters)
 	gpio_install_isr_service(0);
 	gpio_isr_handler_add(SX126X_DIO1_PIN, dio1_isr_handler, NULL);
 	
+	lora_pcp_init(); // Load persisted replay counter
 	lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH); // Listen for receipt from receiver
 
 	while (1) {
-		if (xQueueReceive(xEspReceivedEncKeyQueue, enc_key_buf, 1)) {
+		// If new encryption key received (will always happen at least once on boot)
+		if (xQueueReceive(xEspReceivedEncKeyQueue, enc_key_buf, 0) == pdTRUE) {
 			lora_pcp_set_key(enc_key_buf);
 		}
-		//ESP_LOG_BUFFER_HEX("CURRENT KEY", enc_key_buf, ENC_KEY_LEN);
+		//ESP_LOG_BUFFER_HEX("CURRENT KEY", enc_key_buf, LORA_PCP_ENC_KEY_LEN);
 
 		vTaskDelay(pdMS_TO_TICKS(50));
 	}

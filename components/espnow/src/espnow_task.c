@@ -17,31 +17,33 @@
 #include "espnow_task.h"
 #include "wifi_funcs.h"
 #include "wifi_task.h"
+#include "lora_pcp.h"
 
 #define TAG "ESPNOW_TASK"
 
 static volatile bool listen_triggered = false;
 static volatile bool toggle_rx = true;
 
-uint8_t received_enc_key[ENC_KEY_LEN] = {0};
+uint8_t received_enc_key[LORA_PCP_ENC_KEY_LEN] = {0};
 
 QueueHandle_t xEspReceivedEncKeyQueue;
 
 //static const uint8_t UNIVERSAL_MAC[ESP_NOW_ETH_ALEN] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
-static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, int data_len) {
+static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, int data_len)
+{
 	#ifdef POLYPLUG_DEBUG
 	ESP_LOGI(TAG, "Received data of len: %d", data_len);
 	#endif
 	
 	// If data is lora enc key
-	if (data_len == ENC_KEY_LEN) {	
+	if (data_len == LORA_PCP_ENC_KEY_LEN) {	
 		// Copy received bytes into your key array
-		memcpy(received_enc_key, data, ENC_KEY_LEN);
+		memcpy(received_enc_key, data, LORA_PCP_ENC_KEY_LEN);
 	
 		// Now print the stored key in hex
 		#ifdef POLYPLUG_DEBUG
-			ESP_LOG_BUFFER_HEX("RECEIVED ENC KEY", received_enc_key, ENC_KEY_LEN);
+			ESP_LOG_BUFFER_HEX("RECEIVED ENC KEY", received_enc_key, LORA_PCP_ENC_KEY_LEN);
 		#endif
 		
 		// Save received key to flash
@@ -50,8 +52,11 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 		listen_triggered = true;
 		toggle_rx = !toggle_rx;
 
+#ifdef POLYPLUG_DEBUG
+		ESP_LOGI(TAG, "Sending new encryption key to LoRa task");
+#endif
 		// Send received enc key
-		xQueueSend(xEspReceivedEncKeyQueue, received_enc_key, 0);
+		xQueueOverwrite(xEspReceivedEncKeyQueue, received_enc_key);
 		
 		// Try to reconnect to Wi-Fi with previously saved network
 		xSemaphoreGive(xWifiReconnectSemaphore);
@@ -75,8 +80,12 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 			ESP_LOGI(TAG, "Parsed SSID=%s, PASS=%s, KEY=%s", network.ssid, network.password, network.key);
 			#endif
 		}
+
+#ifdef POLYPLUG_DEBUG
+		ESP_LOGI(TAG, "Sending Wi-Fi info to wifi_task");
+#endif
 		
-		xQueueSendFromISR(xWifiConnectQueue, &network, 0);
+		xQueueOverwrite(xWifiConnectQueue, &network);
 		
 		listen_triggered = true;
 		toggle_rx = !toggle_rx;
@@ -92,13 +101,13 @@ static void espnow_task(void *param)
 	configASSERT(xEspReceivedEncKeyQueue);
 	
 	esp_err_t err = espnow_funcs_lora_key_nvs_load(received_enc_key);
-	if (err == ESP_OK) {
-		// If key existed, send
-		xQueueSend(xEspReceivedEncKeyQueue, received_enc_key, portMAX_DELAY);
-	}
+
+#ifdef POLYPLUG_DEBUG
+	ESP_LOGI(TAG, "Sending initial loaded encryption key to LoRa task");
+#endif
+	xQueueSend(xEspReceivedEncKeyQueue, received_enc_key, portMAX_DELAY); // MUST ALWAYS SEND INITIAL
    
 	while (1) {
-		
 		// If ESPNOW pair button pressed
 		if (gpio_get_level(PAIR_BTN1_PIN) == 0) {
 			if (toggle_rx) {

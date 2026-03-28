@@ -11,13 +11,14 @@
 
 #include "espnow_funcs.h"
 #include "espnow_task.h"
+#include "lora_pcp.h"
 
 #define TAG "ESP_FUNCS"
 
 #define LORA_ENC_NS "es_lo_ns" // NVS namespace
 #define LORA_ENC_NS_KEY "es_lo_fmt" // FMT
 
-extern uint8_t received_enc_key[ENC_KEY_LEN];
+extern uint8_t received_enc_key[LORA_PCP_ENC_KEY_LEN];
 
 esp_err_t espnow_funcs_wifi_driver_init(void)
 {
@@ -70,7 +71,7 @@ esp_err_t espnow_funcs_lora_key_nvs_save(uint8_t *enc_key)
 		return err;
 		
 	// Store the key
-	err = nvs_set_blob(h, LORA_ENC_NS_KEY, enc_key, ENC_KEY_LEN);
+	err = nvs_set_blob(h, LORA_ENC_NS_KEY, enc_key, LORA_PCP_ENC_KEY_LEN);
 	
 	// Flush pending writes to flash
 	err = nvs_commit(h);
@@ -90,7 +91,7 @@ esp_err_t espnow_funcs_lora_key_nvs_load(uint8_t *enc_key)
 	if (err != ESP_OK)
 		return err;
 		
-	size_t len = ENC_KEY_LEN;
+	size_t len = LORA_PCP_ENC_KEY_LEN;
 
 	err = nvs_get_blob(h, LORA_ENC_NS_KEY, enc_key, &len);
 	
@@ -99,7 +100,7 @@ esp_err_t espnow_funcs_lora_key_nvs_load(uint8_t *enc_key)
 	
 	if (err == ESP_ERR_NVS_NOT_FOUND)
 		return err;
-	if (err == ESP_OK && len != ENC_KEY_LEN)
+	if (err == ESP_OK && len != LORA_PCP_ENC_KEY_LEN)
 		return ESP_ERR_INVALID_SIZE;
 	
 	return err;
