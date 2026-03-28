@@ -102,12 +102,6 @@ void lora_pcp_set_key(const uint8_t *key)
 	xSemaphoreGive(xPcpMutex);
 }
 
-static void generate_random_iv(uint8_t *iv, size_t length) {
-	for (size_t i = 0; i < length; i++) {
-		iv[i] = (uint8_t)(esp_random() % (255 + 1)); // Generate number 0 - 255
-	}
-}
-
 void lora_pcp_process_received_message(uint8_t *message, size_t message_len)
 {
 	// Minimum: 16 bytes IV + 16 bytes ciphertext (one AES block)
@@ -186,7 +180,7 @@ void lora_pcp_process_received_message(uint8_t *message, size_t message_len)
 
 		// Simple toggle
 		if (cmd_msg.index == 0) {
-			xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+			xQueueOverwrite(xRelayToggleQueue, &relay_tx);
 
 			// Send receipt
 			valid_data_rec = true;
@@ -201,7 +195,7 @@ void lora_pcp_process_received_message(uint8_t *message, size_t message_len)
 				strncpy(relay_tx.loop_on,  on_arg,  LOOP_LEN - 1);
 				strncpy(relay_tx.loop_off, off_arg, LOOP_LEN - 1);
 
-				xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+				xQueueOverwrite(xRelayToggleQueue, &relay_tx);
 
 				// Send receipt
 				valid_data_rec = true;
@@ -227,7 +221,7 @@ void lora_pcp_process_received_message(uint8_t *message, size_t message_len)
 				strncpy(relay_tx.plan_days, days_buf, sizeof(relay_tx.plan_days) - 1);
 				strncpy(relay_tx.plan_on, on_buf, sizeof(relay_tx.plan_on) - 1);
 				strncpy(relay_tx.plan_off, off_buf, sizeof(relay_tx.plan_off) - 1);
-				xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+				xQueueOverwrite(xRelayToggleQueue, &relay_tx);
 
 				#ifdef POLYPLUG_DEBUG
 				ESP_LOGI(TAG, "Plan parsed: days='%s' on='%s' off='%s'",
@@ -254,7 +248,7 @@ void lora_pcp_process_received_message(uint8_t *message, size_t message_len)
 				// Save and send
 				relay_tx.away_min = away_min;
 				relay_tx.away_max = away_max;
-				xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+				xQueueOverwrite(xRelayToggleQueue, &relay_tx);
 
 				// Send receipt
 				valid_data_rec = true;
@@ -275,7 +269,7 @@ void lora_pcp_process_received_message(uint8_t *message, size_t message_len)
 
 				// Save and send
 				relay_tx.gpio_cmd = gpio_cmd;
-				xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
+				xQueueOverwrite(xRelayToggleQueue, &relay_tx);
 
 				// Send receipt
 				valid_data_rec = true;
@@ -363,7 +357,7 @@ void lora_pcp_encrypt_and_transmit(uint8_t plaintext[], size_t plaintext_len)
 	memcpy(buffer, plaintext, plaintext_len); // Copy only the actual data
 
 	uint8_t iv[LORA_PCP_IV_LENGTH]; // To hold IV
-	generate_random_iv(iv, sizeof(iv)); // Generate random IV into iv[16]
+	esp_fill_random(iv, sizeof(iv)); // Generate random IV into iv[16]
 
 	struct AES_ctx ctx;
 	AES_init_ctx_iv(&ctx, encryption_key, iv); // Initialize AES context with key and IV
