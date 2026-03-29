@@ -100,7 +100,7 @@ static void espnow_task(void *param)
 	}
 	configASSERT(xEspReceivedEncKeyQueue);
 	
-	esp_err_t err = espnow_funcs_lora_key_nvs_load(received_enc_key);
+	espnow_funcs_lora_key_nvs_load(received_enc_key);
 
 #ifdef POLYPLUG_DEBUG
 	ESP_LOGI(TAG, "Sending initial loaded encryption key to LoRa task");
