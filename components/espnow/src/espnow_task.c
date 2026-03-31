@@ -32,12 +32,16 @@ QueueHandle_t xEspReceivedEncKeyQueue;
 
 static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, int data_len)
 {
+	if (!data || data_len <= 0) {
+		return;
+	}
+
 	#ifdef POLYPLUG_DEBUG
 	ESP_LOGI(TAG, "Received data of len: %d", data_len);
 	#endif
-	
+
 	// If data is lora enc key
-	if (data_len == LORA_PCP_ENC_KEY_LEN) {	
+	if (data_len == LORA_PCP_ENC_KEY_LEN) {
 		// Copy received bytes into your key array
 		memcpy(received_enc_key, data, LORA_PCP_ENC_KEY_LEN);
 	
@@ -63,13 +67,19 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 	}
 	// Else receiving a MAC address and network info for MQTT link
 	else if (data_len <= MQTT_MAX_LEN) {
+		// ESP-NOW data is not guaranteed NUL-terminated; copy and terminate
+		char data_str[MQTT_MAX_LEN + 1];
+		int copy_len = data_len < MQTT_MAX_LEN ? data_len : MQTT_MAX_LEN;
+		memcpy(data_str, data, copy_len);
+		data_str[copy_len] = '\0';
+
 		#ifdef POLYPLUG_DEBUG
-			ESP_LOGI(TAG, "Received MQTT: %s", (char *)data);
+			ESP_LOGI(TAG, "Received MQTT: %s", data_str);
 		#endif
-		
+
 		wifi_mqtt_t network;
-		
-		int n = sscanf((char *)data, "%32[^:]:%64[^:]:%32s", network.ssid, network.password, network.key);
+
+		int n = sscanf(data_str, "%32[^:]:%64[^:]:%32s", network.ssid, network.password, network.key);
 		if (n != 3) {
 			#ifdef POLYPLUG_DEBUG
 			ESP_LOGW(TAG, "Failed to parse MQTT payload (%d fields)", n);
@@ -78,17 +88,14 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 		else {
 			#ifdef POLYPLUG_DEBUG
 			ESP_LOGI(TAG, "Parsed SSID=%s, PASS=%s, KEY=%s", network.ssid, network.password, network.key);
+			ESP_LOGI(TAG, "Sending Wi-Fi info to wifi_task");
 			#endif
-		}
 
-#ifdef POLYPLUG_DEBUG
-		ESP_LOGI(TAG, "Sending Wi-Fi info to wifi_task");
-#endif
-		
-		xQueueOverwrite(xWifiConnectQueue, &network);
-		
-		listen_triggered = true;
-		toggle_rx = !toggle_rx;
+			xQueueOverwrite(xWifiConnectQueue, &network);
+
+			listen_triggered = true;
+			toggle_rx = !toggle_rx;
+		}
 	}
 }
 

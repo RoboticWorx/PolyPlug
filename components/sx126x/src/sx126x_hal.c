@@ -91,9 +91,13 @@ sx126x_hal_status_t sx126x_hal_wakeup(const void *context) {
 	gpio_set_level(SX126X_CS_PIN, 1);
 
 	// Wait for SX126x to be ready (BUSY pin goes low)
-	while (gpio_get_level(SX126X_BUSY_PIN) == 1) {
-		vTaskDelay(pdMS_TO_TICKS(1)); // Small delay to avoid busy-waiting
-	}
+    for (int i = 0; i < 1000 && gpio_get_level(SX126X_BUSY_PIN); ++i) {
+        vTaskDelay(1);
+    }
+    if (gpio_get_level(SX126X_BUSY_PIN) == 1) {
+        ESP_LOGE(TAG, "SX126x BUSY timeout in wakeup");
+        return SX126X_HAL_STATUS_ERROR;
+    }
 
 	return SX126X_HAL_STATUS_OK;
 }
@@ -106,7 +110,14 @@ sx126x_hal_status_t sx126x_hal_write( const void      *ctx,
                                       uint16_t         data_len )
 {
     (void)ctx;
-    while (gpio_get_level(SX126X_BUSY_PIN)) vTaskDelay(1);
+    // Wait for SX126x to be ready (BUSY pin goes low)
+    for (int i = 0; i < 1000 && gpio_get_level(SX126X_BUSY_PIN); ++i) {
+        vTaskDelay(1);
+    }
+    if (gpio_get_level(SX126X_BUSY_PIN) == 1) {
+        ESP_LOGE(TAG, "SX126x BUSY timeout in write");
+        return SX126X_HAL_STATUS_ERROR;
+    }
 
     gpio_set_level(SX126X_CS_PIN, 0);           /* ↓CS */
 
@@ -136,7 +147,14 @@ sx126x_hal_status_t sx126x_hal_read( const void    *ctx,
                                      uint16_t       data_len )
 {
     (void)ctx;
-    while (gpio_get_level(SX126X_BUSY_PIN)) vTaskDelay(1);
+    // Wait for SX126x to be ready (BUSY pin goes low)
+    for (int i = 0; i < 1000 && gpio_get_level(SX126X_BUSY_PIN); ++i) {
+        vTaskDelay(1);
+    }
+    if (gpio_get_level(SX126X_BUSY_PIN) == 1) {
+        ESP_LOGE(TAG, "SX126x BUSY timeout in read");
+        return SX126X_HAL_STATUS_ERROR;
+    }
 
     gpio_set_level(SX126X_CS_PIN, 0);           /* ↓CS */
 

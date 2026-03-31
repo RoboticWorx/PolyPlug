@@ -175,7 +175,12 @@ TickType_t gpio_get_random_ticks_from_range(int min_m, int max_m)
 
 	// Pick a random integer in min_s to max_s
 	int total_seconds = (esp_random() % (max_s - min_s + 1)) + min_s;
-	
+
+	// Enforce minimum of 1 second to prevent 0-tick busy loops
+	if (total_seconds < 1) {
+		total_seconds = 1;
+	}
+
 	// Convert from seconds to FreeRTOS ticks
 	return pdMS_TO_TICKS((uint64_t)total_seconds * 1000ULL);
 }

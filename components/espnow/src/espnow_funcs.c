@@ -67,14 +67,24 @@ esp_err_t espnow_funcs_lora_key_nvs_save(uint8_t *enc_key)
 
 	// Open NVS
 	esp_err_t err = nvs_open(LORA_ENC_NS, NVS_READWRITE, &h);
-	if (err != ESP_OK)
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "Failed to open NVS for writing LoRa key: %s", esp_err_to_name(err));
 		return err;
+	}
 		
 	// Store the key
 	err = nvs_set_blob(h, LORA_ENC_NS_KEY, enc_key, LORA_PCP_ENC_KEY_LEN);
-	
+	if (err != ESP_OK) {
+		nvs_close(h);
+		ESP_LOGE(TAG, "Failed to write LoRa key to NVS: %s", esp_err_to_name(err));
+		return err;
+	}
+
 	// Flush pending writes to flash
 	err = nvs_commit(h);
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "Failed to commit LoRa key to NVS: %s", esp_err_to_name(err));
+	}
 
 	// Close NVS
 	nvs_close(h);
@@ -88,9 +98,11 @@ esp_err_t espnow_funcs_lora_key_nvs_load(uint8_t *enc_key)
 		
 	// Open NVS
 	esp_err_t err = nvs_open(LORA_ENC_NS, NVS_READONLY, &h);
-	if (err != ESP_OK)
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "Failed to open NVS for reading LoRa key: %s", esp_err_to_name(err));
 		return err;
-		
+	}
+
 	size_t len = LORA_PCP_ENC_KEY_LEN;
 
 	err = nvs_get_blob(h, LORA_ENC_NS_KEY, enc_key, &len);
@@ -98,11 +110,19 @@ esp_err_t espnow_funcs_lora_key_nvs_load(uint8_t *enc_key)
 	// Close NVS
 	nvs_close(h);
 	
-	if (err == ESP_ERR_NVS_NOT_FOUND)
+	if (err == ESP_ERR_NVS_NOT_FOUND) {
+		return ESP_OK;
+	}
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "Failed to read LoRa key from NVS: %s", esp_err_to_name(err));
 		return err;
-	if (err == ESP_OK && len != LORA_PCP_ENC_KEY_LEN)
+	}
+	if (len != LORA_PCP_ENC_KEY_LEN) {
+		ESP_LOGE(TAG, "Invalid LoRa key length in NVS: %u", (unsigned)len);
+		memset(enc_key, 0, LORA_PCP_ENC_KEY_LEN);
 		return ESP_ERR_INVALID_SIZE;
-	
-	return err;
+	}
+
+	return ESP_OK;
 }
 

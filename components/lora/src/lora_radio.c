@@ -11,10 +11,14 @@ static const char *TAG = "LORA_RADIO";
 
 void lora_radio_set_rx_mode(uint8_t max_payload_len)
 {
-	// Poll for SX1262 to be ready
-	while (gpio_get_level(SX126X_BUSY_PIN) == 1) {
-		vTaskDelay(pdMS_TO_TICKS(1));
-	}
+	// Wait for SX126x to be ready (BUSY pin goes low)
+    for (int i = 0; i < 1000 && gpio_get_level(SX126X_BUSY_PIN); ++i) {
+        vTaskDelay(1);
+    }
+    if (gpio_get_level(SX126X_BUSY_PIN) == 1) {
+        ESP_LOGE(TAG, "BUSY timeout in lora_radio_set_rx_mode");
+        return;
+    }
 
 	// Restore max payload length for receiving
 	sx126x_pkt_params_lora_t pkt_params = {
@@ -34,17 +38,21 @@ void lora_radio_set_rx_mode(uint8_t max_payload_len)
 	status = sx126x_set_rx(NULL, SX126X_RX_SINGLE_MODE);
 
 	if (status != SX126X_STATUS_OK) {
-		ESP_LOGE(TAG, "Failed to enter RX mode\n");
+		ESP_LOGE(TAG, "Failed to enter RX mode");
 		return;
 	}
 }
 
 void lora_radio_tx(uint8_t tx_data[], uint8_t data_len)
 {
-	// Poll for SX1262 to be ready
-	while (gpio_get_level(SX126X_BUSY_PIN) == 1) {
-		vTaskDelay(pdMS_TO_TICKS(1));
-	}
+	// Wait for SX126x to be ready (BUSY pin goes low)
+    for (int i = 0; i < 1000 && gpio_get_level(SX126X_BUSY_PIN); ++i) {
+        vTaskDelay(1);
+    }
+    if (gpio_get_level(SX126X_BUSY_PIN) == 1) {
+        ESP_LOGE(TAG, "BUSY timeout in lora_radio_tx");
+        return;
+    }
 
 	// Update payload length for this transmission
 	sx126x_pkt_params_lora_t pkt_params = {

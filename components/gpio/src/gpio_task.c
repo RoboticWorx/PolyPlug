@@ -49,14 +49,19 @@ static int parse_weekdays(const char *days) {
 	}
 	return mask;
 }
-// Parse 'HHMMSS' format into the number of seconds since midnight
+// Parse 'HHMMSS' format into the number of seconds since midnight (clamped to 0..86399)
 static int parse_hhmmss(const char *s) {
 	int int_str = atoi(s); // Parse the string into an integer (turn directly)
-	
+
 	int hour = int_str / 10000; // Isolate hours
 	int min = (int_str / 100) % 100; // Isolate minutes
 	int sec = int_str % 100; // Isolate seconds
-	
+
+	// Clamp to valid ranges
+	if (hour > 23) hour = 23;
+	if (min > 59) min = 59;
+	if (sec > 59) sec = 59;
+
 	return hour * 3600 + min * 60 + sec; // Seconds since midnight
 }
 // Find the next epoch >= now that matches days_mask and sec_of_day
@@ -162,16 +167,38 @@ static void plan_mode_task(void *arg) {
 			ESP_LOGI(TAG, "today_enabled: Waiting until OFF: '%" PRIu64 "' ms", remain_ms);
 			#endif
 			delay_ms_safe(remain_ms);
-			
+
 			gpio_relay_toggle(false);
 			relay_level = true; // True to toggle from false if toggle cmd sent
 			#ifdef POLYPLUG_DEBUG
 			ESP_LOGI(TAG, "today_enabled: Continuing");
 			#endif
-			
+
 			continue; // Next cycle
 		}
-		
+
+		// Overnight schedule: check if we're in yesterday's window that wraps past midnight
+		// E.g., ON=22:00, OFF=06:00 — at 3 AM we're inside yesterday's window
+		if (off_sec <= on_sec) {
+			int yesterday_wday = (tmn.tm_wday + 6) % 7;
+			bool yesterday_enabled = (days_mask & (1 << yesterday_wday)) != 0;
+
+			if (yesterday_enabled && now < (today0 + off_sec)) {
+				gpio_relay_toggle(true);
+				relay_level = false;
+				uint64_t remain_ms = (uint64_t)((today0 + off_sec) - now) * 1000ULL;
+				#ifdef POLYPLUG_DEBUG
+				ESP_LOGI(TAG, "Overnight window (from yesterday): Waiting until OFF: '%" PRIu64 "' ms", remain_ms);
+				#endif
+				delay_ms_safe(remain_ms);
+
+				gpio_relay_toggle(false);
+				relay_level = true;
+
+				continue; // Next cycle
+			}
+		}
+
 		/* Check if later */
 		
 		// Compute the absolute epoch of the next ON
@@ -253,42 +280,47 @@ static void gpio_task(void *arg)
 				// Turn received time on/off into ticks
 				TickType_t on_ticks = gpio_lookup_time_ticks(relay_rx.loop_on);
 				TickType_t off_ticks = gpio_lookup_time_ticks(relay_rx.loop_off);
-				
-				#ifdef POLYPLUG_DEBUG
-				ESP_LOGI(TAG, "TICKS: on=%" PRIu32 ", off=%" PRIu32, on_ticks, off_ticks);
-				ESP_LOGI(TAG, "MIN: on=%" PRIu32 ", off=%" PRIu32, (pdTICKS_TO_MS(on_ticks) / (1000 * 60)), (pdTICKS_TO_MS(off_ticks) / (1000 * 60)));
-				#endif
-	
-				// Loop until new data arrives
-				while(1) {
-					// Start ON loop for duration until new data received
-					gpio_relay_toggle(true);
-					relay_level = false; // False to toggle from true if toggle cmd sent
-					if (xQueueReceive(xRelayToggleQueue, &relay_rx, on_ticks) == pdPASS) {
-						#ifdef POLYPLUG_DEBUG
-						ESP_LOGI(TAG, "Pattern updated during ON: index=%d on=%s off=%s",
-								relay_rx.index, relay_rx.loop_on, relay_rx.loop_off);
-						#endif
-						
-						// Restart to unlock queue at the top
-						xQueueOverwrite(xRelayToggleQueue, &relay_rx);
-						
-						break;
-					}
-					
-					// Start OFF loop for duration until new data received
-					gpio_relay_toggle(false);
-					relay_level = true; // True to toggle from false if toggle cmd sent
-					if (xQueueReceive(xRelayToggleQueue, &relay_rx, off_ticks) == pdPASS) {
-						#ifdef POLYPLUG_DEBUG
-						ESP_LOGI(TAG, "Pattern updated during OFF: index=%d on=%s off=%s",
-								relay_rx.index, relay_rx.loop_on, relay_rx.loop_off);
-						#endif
-						
-						// Restart to unlock queue at the top
-						xQueueOverwrite(xRelayToggleQueue, &relay_rx);
-						
-						break;
+
+				if (on_ticks == 0 || off_ticks == 0) {
+					ESP_LOGE(TAG, "Invalid loop time: on='%s' off='%s'", relay_rx.loop_on, relay_rx.loop_off);
+				}
+				else {
+					#ifdef POLYPLUG_DEBUG
+					ESP_LOGI(TAG, "TICKS: on=%" PRIu32 ", off=%" PRIu32, on_ticks, off_ticks);
+					ESP_LOGI(TAG, "MIN: on=%" PRIu32 ", off=%" PRIu32, (pdTICKS_TO_MS(on_ticks) / (1000 * 60)), (pdTICKS_TO_MS(off_ticks) / (1000 * 60)));
+					#endif
+
+					// Loop until new data arrives
+					while(1) {
+						// Start ON loop for duration until new data received
+						gpio_relay_toggle(true);
+						relay_level = false; // False to toggle from true if toggle cmd sent
+						if (xQueueReceive(xRelayToggleQueue, &relay_rx, on_ticks) == pdPASS) {
+							#ifdef POLYPLUG_DEBUG
+							ESP_LOGI(TAG, "Pattern updated during ON: index=%d on=%s off=%s",
+									relay_rx.index, relay_rx.loop_on, relay_rx.loop_off);
+							#endif
+
+							// Restart to unlock queue at the top
+							xQueueOverwrite(xRelayToggleQueue, &relay_rx);
+
+							break;
+						}
+
+						// Start OFF loop for duration until new data received
+						gpio_relay_toggle(false);
+						relay_level = true; // True to toggle from false if toggle cmd sent
+						if (xQueueReceive(xRelayToggleQueue, &relay_rx, off_ticks) == pdPASS) {
+							#ifdef POLYPLUG_DEBUG
+							ESP_LOGI(TAG, "Pattern updated during OFF: index=%d on=%s off=%s",
+									relay_rx.index, relay_rx.loop_on, relay_rx.loop_off);
+							#endif
+
+							// Restart to unlock queue at the top
+							xQueueOverwrite(xRelayToggleQueue, &relay_rx);
+
+							break;
+						}
 					}
 				}
 			}

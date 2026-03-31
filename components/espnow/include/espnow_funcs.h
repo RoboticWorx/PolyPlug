@@ -28,18 +28,18 @@ esp_err_t espnow_funcs_wifi_radio_start(uint8_t channel);
 esp_err_t espnow_funcs_espnow_register_recv_cb(esp_now_recv_cb_t cb);
 
 /**
- * @brief Save a given 16B encryption key to NVS flash
+ * @brief Load a previously saved 16B encryption key from NVS flash
  *
- * @param [in] enc_key The key to save
+ * @param [out] enc_key Buffer to receive the loaded key
  *
  * @return ESP_ERR
  */
 esp_err_t espnow_funcs_lora_key_nvs_load(uint8_t *enc_key);
 
 /**
- * @brief Load a given 16B encryption key from NVS flash
+ * @brief Save a given 16B encryption key to NVS flash
  *
- * @param [in] enc_key The key to load
+ * @param [in] enc_key The key to save
  *
  * @return ESP_ERR
  */

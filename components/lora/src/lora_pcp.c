@@ -1,5 +1,6 @@
 #include "polyplug_macros.h"
 
+#include <inttypes.h>
 #include <string.h>
 
 #include "esp_log.h"

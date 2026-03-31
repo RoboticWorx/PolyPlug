@@ -1,5 +1,6 @@
 #include "polyplug_macros.h"
 
+#include <ctype.h>
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
@@ -141,6 +142,8 @@ static void tz_apply_fixed_posix_from_offsets(int raw_offset_s, int dst_offset_s
 	#endif
 }
 
+#define HTTP_BODY_MAX_SIZE (16 * 1024) // 16 KB cap to prevent unbounded growth
+
 // Simple retrying HTTP GET (chunk-safe). Returns true with malloc'd body on HTTP 200
 static bool http_get_body_retry(const char *url, char **out_body, size_t *out_len)
 {
@@ -212,6 +215,14 @@ static bool http_get_body_retry(const char *url, char **out_body, size_t *out_le
 
 			// r == 0 means EOF (server closed after sending body)
 			if (r == 0) {
+				break;
+			}
+
+			// Reject responses that exceed our safety cap
+			if (len + (size_t)r > HTTP_BODY_MAX_SIZE) {
+				ESP_LOGE(TAG, "HTTP response body exceeded max size of %d bytes", HTTP_BODY_MAX_SIZE);
+				free(body);
+				body = NULL;
 				break;
 			}
 
@@ -310,7 +321,7 @@ static void strtrim_inplace(char *s)
 }
 
 // Fetch IANA timezone over HTTP, map to POSIX or apply fixed-offset; returns ESP_OK on success
-esp_err_t wifi_funcs_apply_timezone_auto(void)
+static esp_err_t wifi_funcs_apply_timezone_auto(void)
 {
 	// Response body buffer
 	char *body = NULL;
@@ -567,11 +578,9 @@ void wifi_funcs_wifi_event_init(void)
 {
 	wifi_event_group = xEventGroupCreate();
 	
-	ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler,
-			 NULL, NULL));
+	ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler, NULL, NULL));
 				 
-	ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler,
-			 NULL, NULL));
+	ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler, NULL, NULL));
 }
 
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
@@ -609,16 +618,14 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 			ESP_LOGI(TAG, "Payload=%.*s", event->data_len, event->data);
 			
 			if (event->topic_len == strlen(topic_cmd) && memcmp(event->topic, topic_cmd, event->topic_len) == 0) {
-				#ifdef POLYPLUG_DEBUG
-				ESP_LOGI(TAG, "Sent MQTT ACK on %s", topic_ack);
-				#endif
-				
 				// Extract the payload
 				char buf[4];
 				size_t len = event->data_len < sizeof(buf) - 1 ? event->data_len : sizeof(buf) - 1;
 				memcpy(buf, event->data, len);
 				buf[len] = '\0';
-		
+
+				bool cmd_ok = false;
+
 				// Parse with sscanf
 				int value;
 				if (sscanf(buf, "%d", &value) == 1) {
@@ -627,7 +634,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 						#ifdef POLYPLUG_DEBUG
 						ESP_LOGI(TAG, "Parsed payload as %d", value);
 						#endif
-						
+
 						relay_t relay_tx;
 						// Check for OTA update
 						if (value == 255) {
@@ -647,15 +654,17 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 						// GPIO toggle
 						else {
 							relay_tx.index = 4; // GPIO
-				
+
 							#ifdef POLYPLUG_DEBUG
 							ESP_LOGI(TAG, "Parsed Wi-Fi GPIO command: %d", value);
 							#endif
-							
+
 							// Save and send
 							relay_tx.gpio_cmd = value;
 							xQueueSend(xRelayToggleQueue, &relay_tx, portMAX_DELAY);
 						}
+
+						cmd_ok = true;
 					}
 					else {
 						#ifdef POLYPLUG_DEBUG
@@ -668,8 +677,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 					ESP_LOGW(TAG, "Failed to parse integer from '%s'", buf);
 					#endif
 				}
-				
-				esp_mqtt_client_publish(mqtt_client, topic_ack, "PolyCast5MQTTRxSuccess", 0, 0, 0);
+
+				if (cmd_ok) {
+					esp_mqtt_client_publish(mqtt_client, topic_ack, "PolyCast5MQTTRxSuccess", 0, 0, 0);
+					#ifdef POLYPLUG_DEBUG
+					ESP_LOGI(TAG, "Sent MQTT ACK on %s", topic_ack);
+					#endif
+				}
 			}
 			break;
 			
@@ -716,8 +730,7 @@ void wifi_funcs_mqtt_client_start(void)
 static bool wait_for_connection(TickType_t timeout)
 {
 	// Wait for either bit
-	EventBits_t bits = xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT | WIFI_DISCONNECTED_BIT, pdTRUE,
-				pdFALSE, timeout);
+	EventBits_t bits = xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT | WIFI_DISCONNECTED_BIT, pdTRUE, pdFALSE, timeout);
 
 	// Got IP
 	if (bits & WIFI_CONNECTED_BIT) {
@@ -749,7 +762,7 @@ esp_err_t wifi_funcs_connect(void)
 		
 		err = esp_wifi_connect();
 		
-		// Check connetion
+		// Check connection
 		if (wait_for_connection(pdMS_TO_TICKS(15000))) {
 			#ifdef POLYPLUG_DEBUG
 			ESP_LOGI(TAG, "Wi-Fi connected and got IP!");
@@ -864,11 +877,17 @@ void wifi_funcs_mac_nvs_save(const char *key)
 void wifi_funcs_mac_nvs_load(void)
 {
 	nvs_handle_t handle;
-	
+
 	// Open NVS
-	nvs_open(MQTT_NS, NVS_READONLY, &handle);
-	
-	// Retreive string
+	esp_err_t err = nvs_open(MQTT_NS, NVS_READONLY, &handle);
+	if (err != ESP_OK) {
+		#ifdef POLYPLUG_DEBUG
+		ESP_LOGW(TAG, "mac_nvs_load: NVS open failed: %s", esp_err_to_name(err));
+		#endif
+		return;
+	}
+
+	// Retrieve string
 	size_t len = sizeof(mqtt_topic_key_str);
 	if (nvs_get_str(handle, MQTT_NS_KEY, mqtt_topic_key_str, &len) == ESP_OK) {
 		#ifdef POLYPLUG_DEBUG
