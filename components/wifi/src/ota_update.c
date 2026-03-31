@@ -130,7 +130,7 @@ static void ota_task(void *_)
 		if (manifest_size_bytes > 0) {
 			// Show smooth %
 			int pct = (int)((read * 100ULL) / (unsigned)manifest_size_bytes);
-			
+
 			// Only when it changes
 			if (pct != last_pct) {
 				last_pct = pct;
@@ -141,7 +141,7 @@ static void ota_task(void *_)
 				if (pct < 0) {
 					pct = 0;
 				}
-				
+
 				#ifdef POLYPLUG_DEBUG
 				ESP_LOGI(TAG, "Update %d%% (%u/%d)", pct, (unsigned)read, manifest_size_bytes);
 				#endif
@@ -200,15 +200,12 @@ static void ota_task(void *_)
 		pending_manifest_ver[0] = '\0'; // Clear pending version
 	}
 	
-	// Abort process
+	// OTA failed -> restart to recover (MQTT was destroyed)
 	out:
 	ota_task_handle = NULL;
-	vTaskDelete(NULL);
-
-	ESP_LOGE(TAG, "OTA error! Restarting: %s", esp_err_to_name(err));
-
-	vTaskDelay(pdMS_TO_TICKS(2000));
-	esp_restart(); // Restart
+	ESP_LOGE(TAG, "OTA failed: %s - restarting", esp_err_to_name(err));
+	vTaskDelay(pdMS_TO_TICKS(100));
+	esp_restart();
 }
 
 static bool http_get_small(const char *url, char *out, size_t out_sz)
@@ -252,10 +249,13 @@ static bool http_get_small(const char *url, char *out, size_t out_sz)
 	}
 	out[n] = '\0'; // NUL-terminator
 
+	// Check HTTP status
+	int status = esp_http_client_get_status_code(h);
+
 	// Clean up and return
 	esp_http_client_close(h);
 	esp_http_client_cleanup(h);
-	return n > 0; // True if bytes read
+	return n > 0 && status == 200;
 }
 
 static void ota_check_task(void *_)
@@ -341,7 +341,9 @@ static void ota_check_task(void *_)
 	cJSON_Delete(root);
 
 	done:
-    wifi_funcs_mqtt_client_start(); // Bring back MQTT for normal operation
+	if (!ota_update_in_progress()) {
+		wifi_funcs_mqtt_client_start(); // Bring back MQTT for normal operation
+	}
 	ota_check_task_handle = NULL;
 	vTaskDelete(NULL);
 }
@@ -362,7 +364,7 @@ bool ota_update_check_start(const char *manifest_url)
 	strlcpy(manifest_url_buf, manifest_url, sizeof(manifest_url_buf));
 	
 	// Create OTA check task
-	return xTaskCreate(ota_check_task, "ota_check_task", 5 * 1024, NULL, tskIDLE_PRIORITY + 1, &ota_check_task_handle) == pdPASS;
+	return xTaskCreate(ota_check_task, "ota_check_task", 6 * 1024, NULL, tskIDLE_PRIORITY + 1, &ota_check_task_handle) == pdPASS;
 }
 
 bool ota_update_start(const char *url)

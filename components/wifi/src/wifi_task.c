@@ -117,8 +117,13 @@ static void wifi_task(void *param)
 			ESP_ERROR_CHECK(wifi_funcs_set_config(prev_network.ssid, 0, prev_network.password));
 		}
 		
-		// Poll reconnect
-		ESP_ERROR_CHECK(wifi_funcs_connect());
+		// Poll reconnect (don't abort on transient errors)
+		esp_err_t err = wifi_funcs_connect();
+		if (err != ESP_OK) {
+#ifdef POLYPLUG_DEBUG
+			ESP_LOGW(TAG, "wifi_funcs_connect: %s", esp_err_to_name(err));
+#endif
+		}
 		
 		vTaskDelay(pdMS_TO_TICKS(250));
 	}
