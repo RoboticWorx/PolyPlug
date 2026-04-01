@@ -16,6 +16,20 @@ static const char *TAG = "SX126X_HAL";
 // Global SPI device handle
 static spi_device_handle_t sx126x_spi = NULL;
 
+static bool sx126x_wait_while_busy(uint32_t timeout_ms)
+{
+    TickType_t start = xTaskGetTickCount();
+
+    while (gpio_get_level(SX126X_BUSY_PIN) == 1) {
+        if ((xTaskGetTickCount() - start) > pdMS_TO_TICKS(timeout_ms)) {
+            return false;
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+    return true;
+}
+
 // Initialize the SX126x HAL with the SPI handle and configure GPIO pins
 void sx126x_hal_init(spi_device_handle_t spi) {
 	sx126x_spi = spi;
@@ -32,8 +46,7 @@ void sx126x_hal_init(spi_device_handle_t spi) {
 
 	io_conf.pin_bit_mask = (1ULL << SX126X_BUSY_PIN) | (1ULL << SX126X_DIO1_PIN);
 	io_conf.mode = GPIO_MODE_INPUT;
-	io_conf.pull_up_en =
-		GPIO_PULLUP_ENABLE; // Optional: enable pull-up for stability
+	io_conf.pull_up_en = GPIO_PULLUP_DISABLE; // Pulled up internally in SX126x
 	io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
 	io_conf.intr_type = GPIO_INTR_DISABLE; // Interrupts will be handled
 										   // separately in lora_task.c
@@ -91,11 +104,8 @@ sx126x_hal_status_t sx126x_hal_wakeup(const void *context) {
 	gpio_set_level(SX126X_CS_PIN, 1);
 
 	// Wait for SX126x to be ready (BUSY pin goes low)
-    for (int i = 0; i < 1000 && gpio_get_level(SX126X_BUSY_PIN); ++i) {
-        vTaskDelay(1);
-    }
-    if (gpio_get_level(SX126X_BUSY_PIN) == 1) {
-        ESP_LOGE(TAG, "SX126x BUSY timeout in wakeup");
+    if (!sx126x_wait_while_busy(100)) {
+        ESP_LOGW(TAG, "BUSY timeout in sx126x_hal_wakeup");
         return SX126X_HAL_STATUS_ERROR;
     }
 
@@ -111,11 +121,8 @@ sx126x_hal_status_t sx126x_hal_write( const void      *ctx,
 {
     (void)ctx;
     // Wait for SX126x to be ready (BUSY pin goes low)
-    for (int i = 0; i < 1000 && gpio_get_level(SX126X_BUSY_PIN); ++i) {
-        vTaskDelay(1);
-    }
-    if (gpio_get_level(SX126X_BUSY_PIN) == 1) {
-        ESP_LOGE(TAG, "SX126x BUSY timeout in write");
+    if (!sx126x_wait_while_busy(100)) {
+        ESP_LOGW(TAG, "BUSY timeout in sx126x_hal_write");
         return SX126X_HAL_STATUS_ERROR;
     }
 
@@ -148,11 +155,8 @@ sx126x_hal_status_t sx126x_hal_read( const void    *ctx,
 {
     (void)ctx;
     // Wait for SX126x to be ready (BUSY pin goes low)
-    for (int i = 0; i < 1000 && gpio_get_level(SX126X_BUSY_PIN); ++i) {
-        vTaskDelay(1);
-    }
-    if (gpio_get_level(SX126X_BUSY_PIN) == 1) {
-        ESP_LOGE(TAG, "SX126x BUSY timeout in read");
+    if (!sx126x_wait_while_busy(100)) {
+        ESP_LOGW(TAG, "BUSY timeout in sx126x_hal_read");
         return SX126X_HAL_STATUS_ERROR;
     }
 
@@ -164,10 +168,9 @@ sx126x_hal_status_t sx126x_hal_read( const void    *ctx,
     t_cmd.length    = cmd_len * 8;
     ESP_ERROR_CHECK_WITHOUT_ABORT(spi_device_polling_transmit(sx126x_spi, &t_cmd));
 
-    /* clock out ‘data_len’ dummy bytes while reading MISO */
-    uint8_t dummy = 0;
+    /* clock out 'data_len' dummy bytes while reading MISO */
     spi_transaction_t t_rd  = { 0 };
-    t_rd.tx_buffer = &dummy;          /* same byte reused */
+    t_rd.tx_buffer = NULL;          /* NULL tx sends zeros */
     t_rd.length    = data_len * 8;    /* bits out  */
     t_rd.rx_buffer = data;
     t_rd.rxlength  = data_len * 8;    /* bits in   */

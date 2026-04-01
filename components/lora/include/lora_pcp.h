@@ -22,6 +22,7 @@
 #ifndef LORA_PCP_H
 #define LORA_PCP_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -79,15 +80,20 @@ void lora_pcp_process_received_message(uint8_t *message, size_t message_len);
 
 /**
  * @brief Sends an ACK receipt if last received message was valid
+ *
+ * @return True if ACK TX was started (caller should wait for TX_DONE to re-arm RX),
+ *         false if no TX was started (caller must re-arm RX)
  */
-void lora_pcp_send_receipt(void);
+bool lora_pcp_send_receipt(void);
 
 /**
  * @brief Encrypts plaintext with AES-128-CCM and transmits over LoRa
  *
  * @param [in] plaintext The data to encrypt and transmit
  * @param [in] plaintext_len Length of the data to encrypt and transmit
+ *
+ * @return True on TX success, false on failure (caller must re-arm RX)
  */
-void lora_pcp_encrypt_and_transmit(uint8_t plaintext[], size_t plaintext_len);
+bool lora_pcp_encrypt_and_transmit(uint8_t plaintext[], size_t plaintext_len);
 
 #endif // LORA_PCP_H

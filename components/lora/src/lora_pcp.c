@@ -343,7 +343,7 @@ void lora_pcp_process_received_message(uint8_t *message, size_t message_len)
 	xSemaphoreGive(xPcpMutex);
 }
 
-void lora_pcp_send_receipt(void)
+bool lora_pcp_send_receipt(void)
 {
 	xSemaphoreTake(xPcpMutex, portMAX_DELAY);
 
@@ -363,27 +363,27 @@ void lora_pcp_send_receipt(void)
 		ESP_LOGI(TAG, "SENDING ACK msg_id=%" PRIu32, ack.msg_id);
 		#endif
 
-		// Encrypt and send over (outside mutex - TX can take time)
-		lora_pcp_encrypt_and_transmit((uint8_t *)&ack, sizeof(ack));
+		// Encrypt and send - TX_DONE handler will re-arm RX on success
+		// On failure, return false so caller re-arms RX
+		return lora_pcp_encrypt_and_transmit((uint8_t *)&ack, sizeof(ack));
 	}
-	else {
-		xSemaphoreGive(xPcpMutex);
-		lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH); // Reset RX
-	}
+
+	xSemaphoreGive(xPcpMutex);
+	return false; // No TX started - caller must re-arm RX
 }
 
-void lora_pcp_encrypt_and_transmit(uint8_t plaintext[], size_t plaintext_len)
+bool lora_pcp_encrypt_and_transmit(uint8_t plaintext[], size_t plaintext_len)
 {
 	if (plaintext_len > LORA_PCP_CIPHERTEXT_LENGTH) {
 		ESP_LOGE(TAG, "LoRa plaintext too long (%u bytes, max %u)",
 			(unsigned)plaintext_len,
 			(unsigned)LORA_PCP_CIPHERTEXT_LENGTH);
-		return;
+		return false;
 	}
 
 	if (pcp_key_id == 0) {
 		ESP_LOGE(TAG, "No key set, cannot transmit");
-		return;
+		return false;
 	}
 
 	uint8_t nonce[LORA_PCP_NONCE_LENGTH];
@@ -403,7 +403,7 @@ void lora_pcp_encrypt_and_transmit(uint8_t plaintext[], size_t plaintext_len)
 
 	if (status != PSA_SUCCESS) {
 		ESP_LOGE(TAG, "CCM encrypt failed: %d", (int)status);
-		return;
+		return false;
 	}
 
 	// Assemble wire message: [nonce | ciphertext | MIC]
@@ -413,5 +413,5 @@ void lora_pcp_encrypt_and_transmit(uint8_t plaintext[], size_t plaintext_len)
 	memcpy(message, nonce, LORA_PCP_NONCE_LENGTH);
 	memcpy(message + LORA_PCP_NONCE_LENGTH, ct_and_tag, ct_and_tag_len);
 
-	lora_radio_tx(message, msg_len);
+	return lora_radio_tx(message, msg_len);
 }

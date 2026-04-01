@@ -1,6 +1,7 @@
 #ifndef LORA_RADIO_H
 #define LORA_RADIO_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "sx126x.h"
@@ -18,15 +19,19 @@ typedef struct sx126x_s {
  * @brief Sets SX1262 radio in one-shot receive mode
  *
  * @param [in] max_payload_len Maximum expected payload length in bytes
+ *
+ * @return True on success, false on failure (caller should retry)
  */
-void lora_radio_set_rx_mode(uint8_t max_payload_len);
+bool lora_radio_set_rx_mode(uint8_t max_payload_len);
 
 /**
  * @brief Transmit raw data over LoRa
  *
  * @param [in] tx_data The data to transmit
  * @param [in] data_len Length of the data to transmit
+ *
+ * @return True on TX success, false on failure
  */
-void lora_radio_tx(uint8_t tx_data[], uint8_t data_len);
+bool lora_radio_tx(uint8_t tx_data[], uint8_t data_len);
 
 #endif // LORA_RADIO_H
