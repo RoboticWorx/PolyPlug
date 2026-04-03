@@ -503,9 +503,14 @@ void wifi_funcs_get_current_date_time(void)
 	time_t now = 0;
 	struct tm timeinfo = {0};
 
-	// Wait until the SNTP task clock has gone past 2025
+	// Wait until the SNTP task clock has gone past 2025 (timeout after 20 s)
+	TickType_t sntp_start = xTaskGetTickCount();
 	while (timeinfo.tm_year < (2025 - 1900)) {
-		vTaskDelay(pdMS_TO_TICKS(1));
+		if ((xTaskGetTickCount() - sntp_start) > pdMS_TO_TICKS(20000)) {
+			ESP_LOGE(TAG, "SNTP sync timed out after 20 s");
+			return;
+		}
+		vTaskDelay(pdMS_TO_TICKS(100));
 		time(&now);
 		localtime_r(&now, &timeinfo);
 	}

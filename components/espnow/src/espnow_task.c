@@ -22,7 +22,7 @@
 #define TAG "ESPNOW_TASK"
 
 static volatile bool listen_triggered = false;
-static volatile bool toggle_rx = true;
+static volatile bool espnow_inited = false;
 
 uint8_t received_enc_key[LORA_PCP_ENC_KEY_LEN] = {0};
 
@@ -54,7 +54,6 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 		espnow_funcs_lora_key_nvs_save(received_enc_key);
 		
 		listen_triggered = true;
-		toggle_rx = !toggle_rx;
 
 #ifdef POLYPLUG_DEBUG
 		ESP_LOGI(TAG, "Sending new encryption key to LoRa task");
@@ -94,7 +93,6 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 			xQueueOverwrite(xWifiConnectQueue, &network);
 
 			listen_triggered = true;
-			toggle_rx = !toggle_rx;
 		}
 	}
 }
@@ -117,42 +115,46 @@ static void espnow_task(void *param)
 	while (1) {
 		// If ESPNOW pair button pressed
 		if (gpio_get_level(PAIR_BTN1_PIN) == 0) {
-			if (toggle_rx) {
+			if (!espnow_inited) {
 				wifi_funcs_wifi_disconnect(); // Disconnect Wi-Fi if connected
-				
+
 				// Initialize ESP-NOW on listening channel
 				ESP_ERROR_CHECK(esp_wifi_set_channel(WIFI_CHANNEL, 0) );
 				ESP_ERROR_CHECK(esp_now_init());
-				
+
 				// Register receive callback
 				ESP_ERROR_CHECK(espnow_funcs_espnow_register_recv_cb(on_data_recv));
-				
+
+				espnow_inited = true;
 				gpio_rgb_ready_to_rx(true); // Tell RGB we're ready to receive
 			}
 			else {
 				// De-initialize ESP-NOW
 				ESP_ERROR_CHECK(esp_now_deinit());
-				
+				espnow_inited = false;
+				listen_triggered = false;
+
 				gpio_rgb_ready_to_rx(false); // Back out RGB
-				
+
 				// Try to reconnect to Wi-Fi with previously saved network
 				xSemaphoreGive(xWifiReconnectSemaphore);
 			}
-			
-			toggle_rx = !toggle_rx;
-			
+
 			vTaskDelay(pdMS_TO_TICKS(250)); // Ignore bounce
 		}
-				
+
 		if (listen_triggered) {
-			// De-initialize ESP-NOW
-			ESP_ERROR_CHECK(esp_now_deinit());
-			
-			gpio_rgb_ready_to_rx(false); // Tell RGB we received
-			
 			listen_triggered = false;
+
+			if (espnow_inited) {
+				// De-initialize ESP-NOW
+				ESP_ERROR_CHECK(esp_now_deinit());
+				espnow_inited = false;
+			}
+
+			gpio_rgb_ready_to_rx(false); // Tell RGB we received
 		}
-	
+
 		vTaskDelay(pdMS_TO_TICKS(10));
 	}
 }

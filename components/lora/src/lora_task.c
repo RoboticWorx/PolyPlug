@@ -204,26 +204,42 @@ static void lora_event_handler_task(void *pvParameters)
 			uint16_t irq_flags = 0;
 			sx126x_get_irq_status(NULL, &irq_flags);
 
+			// Check RX errors first - SX126X sets both CRC_ERROR and RX_DONE
+			// on a corrupted packet, so errors must take priority
+			if (irq_flags & SX126X_IRQ_HEADER_ERROR) {
+				#ifdef POLYPLUG_DEBUG
+				ESP_LOGE(TAG, "Header error in received packet");
+				#endif
+				sx126x_clear_irq_status(NULL, SX126X_IRQ_HEADER_ERROR | SX126X_IRQ_RX_DONE);
+				rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
+			}
+			else if (irq_flags & SX126X_IRQ_CRC_ERROR) {
+				#ifdef POLYPLUG_DEBUG
+				ESP_LOGE(TAG, "CRC error in received packet");
+				#endif
+				sx126x_clear_irq_status(NULL, SX126X_IRQ_CRC_ERROR | SX126X_IRQ_RX_DONE);
+				rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
+			}
 			// If transmission complete
-			if (irq_flags & SX126X_IRQ_TX_DONE) {
+			else if (irq_flags & SX126X_IRQ_TX_DONE) {
 				#ifdef POLYPLUG_DEBUG
 				ESP_LOGI(TAG, "Transmission completed");
 				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_TX_DONE);
 				rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
 			}
-			// Else if receive complete
+			// RX complete (no CRC/header error)
 			else if (irq_flags & SX126X_IRQ_RX_DONE) {
 				// Read the received packet
-				
+
 				uint8_t rx_buffer[LORA_PCP_PAYLOAD_LENGTH];
 				uint8_t rx_size = 0;
-				
+
 				sx126x_rx_buffer_status_t rx_status;
-				
+
 				// Check RX
 				sx126x_get_rx_buffer_status(NULL, &rx_status);
-				
+
 				// Get size of packet
 				rx_size = rx_status.pld_len_in_bytes;
 
@@ -246,7 +262,7 @@ static void lora_event_handler_task(void *pvParameters)
 
 				// Process received
 				lora_pcp_process_received_message(rx_buffer, rx_size);
-				
+
 				// Log RSSI
 				#ifdef POLYPLUG_DEBUG
 				sx126x_pkt_status_lora_t pkt_status;
@@ -263,7 +279,7 @@ static void lora_event_handler_task(void *pvParameters)
 
 				// Clear IRQ
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_RX_DONE);
-				
+
 				// Send ACK if valid; if no TX started, re-arm RX now
 				if (!lora_pcp_send_receipt()) {
 					rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
@@ -275,22 +291,6 @@ static void lora_event_handler_task(void *pvParameters)
 				ESP_LOGW(TAG, "RX timeout occurred");
 				#endif
 				sx126x_clear_irq_status(NULL, SX126X_IRQ_TIMEOUT);
-				rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
-			}
-
-			if (irq_flags & SX126X_IRQ_HEADER_ERROR) {
-				#ifdef POLYPLUG_DEBUG
-				ESP_LOGE(TAG, "Header error in received packet");
-				#endif
-				sx126x_clear_irq_status(NULL, SX126X_IRQ_HEADER_ERROR);
-				rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
-			}
-
-			if (irq_flags & SX126X_IRQ_CRC_ERROR) {
-				#ifdef POLYPLUG_DEBUG
-				ESP_LOGE(TAG, "CRC error in received packet");
-				#endif
-				sx126x_clear_irq_status(NULL, SX126X_IRQ_CRC_ERROR);
 				rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
 			}
 		}

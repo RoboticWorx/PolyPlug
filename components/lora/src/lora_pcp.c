@@ -347,29 +347,29 @@ bool lora_pcp_send_receipt(void)
 {
 	xSemaphoreTake(xPcpMutex, portMAX_DELAY);
 
-	if (valid_data_rec) {
-		// Build PCP ACK
-		lora_pcp_ack_msg_t ack = {
-			.type = LORA_PCP_ACK,
-			.msg_id = last_msg_id,
-		};
-
-		// Reset valid marker before releasing mutex
-		valid_data_rec = false;
-
+	if (!valid_data_rec) {
 		xSemaphoreGive(xPcpMutex);
-
-		#ifdef POLYPLUG_DEBUG
-		ESP_LOGI(TAG, "SENDING ACK msg_id=%" PRIu32, ack.msg_id);
-		#endif
-
-		// Encrypt and send - TX_DONE handler will re-arm RX on success
-		// On failure, return false so caller re-arms RX
-		return lora_pcp_encrypt_and_transmit((uint8_t *)&ack, sizeof(ack));
+		return false; // No TX started - caller must re-arm RX
 	}
 
+	// Build PCP ACK
+	lora_pcp_ack_msg_t ack = {
+		.type = LORA_PCP_ACK,
+		.msg_id = last_msg_id,
+	};
+
+	// Reset valid marker
+	valid_data_rec = false;
+
+	#ifdef POLYPLUG_DEBUG
+	ESP_LOGI(TAG, "SENDING ACK msg_id=%" PRIu32, ack.msg_id);
+	#endif
+
+	// Hold mutex during encrypt to protect pcp_key_id from concurrent set_key
+	bool ok = lora_pcp_encrypt_and_transmit((uint8_t *)&ack, sizeof(ack));
+
 	xSemaphoreGive(xPcpMutex);
-	return false; // No TX started - caller must re-arm RX
+	return ok;
 }
 
 bool lora_pcp_encrypt_and_transmit(uint8_t plaintext[], size_t plaintext_len)
