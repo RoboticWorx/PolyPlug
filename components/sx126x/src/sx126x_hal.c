@@ -13,6 +13,8 @@
 // Logging tag for debugging
 static const char *TAG = "SX126X_HAL";
 
+#define DEFAULT_SPI_TIMEOUT_MS 100
+
 // Global SPI device handle
 static spi_device_handle_t sx126x_spi = NULL;
 
@@ -104,7 +106,7 @@ sx126x_hal_status_t sx126x_hal_wakeup(const void *context) {
 	gpio_set_level(SX126X_CS_PIN, 1);
 
 	// Wait for SX126x to be ready (BUSY pin goes low)
-    if (!sx126x_wait_while_busy(100)) {
+    if (!sx126x_wait_while_busy(DEFAULT_SPI_TIMEOUT_MS)) {
         ESP_LOGW(TAG, "BUSY timeout in sx126x_hal_wakeup");
         return SX126X_HAL_STATUS_ERROR;
     }
@@ -121,7 +123,7 @@ sx126x_hal_status_t sx126x_hal_write( const void      *ctx,
 {
     (void)ctx;
     // Wait for SX126x to be ready (BUSY pin goes low)
-    if (!sx126x_wait_while_busy(100)) {
+    if (!sx126x_wait_while_busy(DEFAULT_SPI_TIMEOUT_MS)) {
         ESP_LOGW(TAG, "BUSY timeout in sx126x_hal_write");
         return SX126X_HAL_STATUS_ERROR;
     }
@@ -155,7 +157,7 @@ sx126x_hal_status_t sx126x_hal_read( const void    *ctx,
 {
     (void)ctx;
     // Wait for SX126x to be ready (BUSY pin goes low)
-    if (!sx126x_wait_while_busy(100)) {
+    if (!sx126x_wait_while_busy(DEFAULT_SPI_TIMEOUT_MS)) {
         ESP_LOGW(TAG, "BUSY timeout in sx126x_hal_read");
         return SX126X_HAL_STATUS_ERROR;
     }

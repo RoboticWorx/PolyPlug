@@ -265,13 +265,14 @@ void gpio_rgb_cycle_tick(uint32_t period_ms)
 
 static void gpio_bus_timeout_cb(void *arg) {
 	// Clear all lines low when the timer fires
-	gpio_set_level(GPIO_BIT_1_PIN, 0); // LSB
+	gpio_set_level(GPIO_BIT_1_PIN, 0); // MSB
 	gpio_set_level(GPIO_BIT_2_PIN, 0);
 	gpio_set_level(GPIO_BIT_3_PIN, 0);
-	gpio_set_level(GPIO_BIT_4_PIN, 0); // MSB
+	gpio_set_level(GPIO_BIT_4_PIN, 0);
+	gpio_set_level(GPIO_BIT_5_PIN, 0); // LSB
 }
 
-void gpio_pulse_4bit_bus(uint8_t value, uint32_t pulse_ms)
+void gpio_pulse_5bit_bus(uint8_t value, uint32_t pulse_ms)
 {
 	// Create the one-shot timer
 	if (gpio_out_pulse_timer == NULL) {
@@ -289,14 +290,15 @@ void gpio_pulse_4bit_bus(uint8_t value, uint32_t pulse_ms)
 		ESP_ERROR_CHECK(esp_timer_stop(gpio_out_pulse_timer));
 	}
 
-	// Use only the low nibble (maps LSB -> MSB)
-	uint8_t nibble = value & 0x0F;
+	// Use low 5 bits (maps MSB -> LSB)
+	uint8_t bits = value & 0b00011111;
 
 	// Drive highs/lows together to minimize skew
-	gpio_set_level(GPIO_BIT_1_PIN, (nibble >> 0) & 1); // Bit0
-	gpio_set_level(GPIO_BIT_2_PIN, (nibble >> 1) & 1); // Bit1
-	gpio_set_level(GPIO_BIT_3_PIN, (nibble >> 2) & 1); // Bit2
-	gpio_set_level(GPIO_BIT_4_PIN, (nibble >> 3) & 1); // Bit3
+	gpio_set_level(GPIO_BIT_1_PIN, (bits >> 4) & 1); // Bit4
+	gpio_set_level(GPIO_BIT_2_PIN, (bits >> 3) & 1); // Bit3
+	gpio_set_level(GPIO_BIT_3_PIN, (bits >> 2) & 1); // Bit2
+	gpio_set_level(GPIO_BIT_4_PIN, (bits >> 1) & 1); // Bit1
+	gpio_set_level(GPIO_BIT_5_PIN, (bits >> 0) & 1); // Bit0
 
 	// Arm one-shot to clear after pulse_ms
 	ESP_ERROR_CHECK(esp_timer_start_once(gpio_out_pulse_timer, (uint64_t)pulse_ms * 1000ULL));

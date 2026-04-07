@@ -419,11 +419,11 @@ static void gpio_task(void *arg)
 				ESP_LOGI(TAG, "Got GPIO cmd: %d", relay_rx.gpio_cmd);
 				#endif
 				
-				// Only low-nibble is meaningful (IO4...IO24 = 4 bits)
-				uint8_t nibble = (uint8_t)relay_rx.gpio_cmd & 0x0F; // 0-255 possible
+				// Low 5 bits are meaningful (5 GPIO outputs)
+				uint8_t bits = (uint8_t)relay_rx.gpio_cmd & 0b00011111;
 			
 				// 100 ms pulse showing the value in binary via the GPIOs
-				gpio_pulse_4bit_bus(nibble, 100);
+				gpio_pulse_5bit_bus(bits, 100);
 			}
 		}
 		

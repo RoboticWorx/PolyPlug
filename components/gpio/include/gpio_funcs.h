@@ -107,6 +107,6 @@ void gpio_rgb_cycle_tick(uint32_t period_ms);
  *
  * @param [in] pulse_ms Period to hold the pins high in milliseconds (non-blocking)
  */
-void gpio_pulse_4bit_bus(uint8_t value, uint32_t pulse_ms);
+void gpio_pulse_5bit_bus(uint8_t value, uint32_t pulse_ms);
 
 #endif // GPIO_FUNCS_H
