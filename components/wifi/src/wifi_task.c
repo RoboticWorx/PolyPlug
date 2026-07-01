@@ -77,9 +77,9 @@ static void wifi_task(void *param)
 		#endif
 		
 		// Connect
-		ESP_ERROR_CHECK(wifi_funcs_set_config(prev_network.ssid, 0, prev_network.password));
+		ESP_ERROR_CHECK_WITHOUT_ABORT(wifi_funcs_set_config(prev_network.ssid, 0, prev_network.password));
 				
-		ESP_ERROR_CHECK(wifi_funcs_connect());
+		ESP_ERROR_CHECK_WITHOUT_ABORT(wifi_funcs_connect());
 	}
 	else {
 		#ifdef POLYPLUG_DEBUG
@@ -95,7 +95,7 @@ static void wifi_task(void *param)
 			using_espnow = false;
 			
 			// Update config
-			ESP_ERROR_CHECK(wifi_funcs_set_config(info.ssid, 0, info.password));
+			ESP_ERROR_CHECK_WITHOUT_ABORT(wifi_funcs_set_config(info.ssid, 0, info.password));
 			
 			// Save sender MAC to NVS
 			wifi_funcs_mac_nvs_save(info.key);
@@ -114,7 +114,7 @@ static void wifi_task(void *param)
 			wifi_mqtt_t prev_network = wifi_funcs_get_prev();
 						
 			// Update config
-			ESP_ERROR_CHECK(wifi_funcs_set_config(prev_network.ssid, 0, prev_network.password));
+			ESP_ERROR_CHECK_WITHOUT_ABORT(wifi_funcs_set_config(prev_network.ssid, 0, prev_network.password));
 		}
 		
 		// Poll reconnect (don't abort on transient errors)

@@ -644,7 +644,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 						// Check for OTA update
 						if (value == 255) {
 							// Check for new firmware version and update if so
-							ota_update_check_start("https://raw.githubusercontent.com/RoboticWorx/pc5-test/main/manifest.json");
+							ota_update_check_start("https://raw.githubusercontent.com/RoboticWorx/PolyPlug/main/manifest.json");
 						}
 						// Relay ON cmd
 						else if (value == 1) {

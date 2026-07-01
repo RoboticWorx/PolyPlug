@@ -9,6 +9,7 @@
 #include "esp_log.h"		   // For logging
 #include "freertos/FreeRTOS.h" // For vTaskDelay
 #include "freertos/task.h"	   // For task delays
+#include "freertos/semphr.h"   // For the bus mutex
 
 // Logging tag for debugging
 static const char *TAG = "SX126X_HAL";
@@ -17,6 +18,9 @@ static const char *TAG = "SX126X_HAL";
 
 // Global SPI device handle
 static spi_device_handle_t sx126x_spi = NULL;
+
+// Serializes a full CS-low..CS-high command across the two LoRa tasks
+static SemaphoreHandle_t sx126x_bus_mutex = NULL;
 
 static bool sx126x_wait_while_busy(uint32_t timeout_ms)
 {
@@ -35,6 +39,10 @@ static bool sx126x_wait_while_busy(uint32_t timeout_ms)
 // Initialize the SX126x HAL with the SPI handle and configure GPIO pins
 void sx126x_hal_init(spi_device_handle_t spi) {
 	sx126x_spi = spi;
+
+	if (sx126x_bus_mutex == NULL) {
+		sx126x_bus_mutex = xSemaphoreCreateMutex();
+	}
 
 	// Configure GPIO pins
 	gpio_config_t io_conf = {
@@ -85,6 +93,8 @@ sx126x_hal_status_t sx126x_hal_wakeup(const void *context) {
 		return SX126X_HAL_STATUS_ERROR;
 	}
 
+	if (sx126x_bus_mutex) xSemaphoreTake(sx126x_bus_mutex, portMAX_DELAY);
+
 	// CS low to begin communication
 	gpio_set_level(SX126X_CS_PIN, 0);
 
@@ -99,6 +109,7 @@ sx126x_hal_status_t sx126x_hal_wakeup(const void *context) {
 	if (ret != ESP_OK) {
 		ESP_LOGE(TAG, "SPI transmit failed: %s", esp_err_to_name(ret));
 		gpio_set_level(SX126X_CS_PIN, 1); // CS high on failure
+		if (sx126x_bus_mutex) xSemaphoreGive(sx126x_bus_mutex);
 		return SX126X_HAL_STATUS_ERROR;
 	}
 
@@ -108,9 +119,11 @@ sx126x_hal_status_t sx126x_hal_wakeup(const void *context) {
 	// Wait for SX126x to be ready (BUSY pin goes low)
     if (!sx126x_wait_while_busy(DEFAULT_SPI_TIMEOUT_MS)) {
         ESP_LOGW(TAG, "BUSY timeout in sx126x_hal_wakeup");
+        if (sx126x_bus_mutex) xSemaphoreGive(sx126x_bus_mutex);
         return SX126X_HAL_STATUS_ERROR;
     }
 
+	if (sx126x_bus_mutex) xSemaphoreGive(sx126x_bus_mutex);
 	return SX126X_HAL_STATUS_OK;
 }
 
@@ -122,9 +135,12 @@ sx126x_hal_status_t sx126x_hal_write( const void      *ctx,
                                       uint16_t         data_len )
 {
     (void)ctx;
+    if (sx126x_bus_mutex) xSemaphoreTake(sx126x_bus_mutex, portMAX_DELAY);
+
     // Wait for SX126x to be ready (BUSY pin goes low)
     if (!sx126x_wait_while_busy(DEFAULT_SPI_TIMEOUT_MS)) {
         ESP_LOGW(TAG, "BUSY timeout in sx126x_hal_write");
+        if (sx126x_bus_mutex) xSemaphoreGive(sx126x_bus_mutex);
         return SX126X_HAL_STATUS_ERROR;
     }
 
@@ -145,6 +161,7 @@ sx126x_hal_status_t sx126x_hal_write( const void      *ctx,
     }
 
     gpio_set_level(SX126X_CS_PIN, 1);           /* ↑CS */
+    if (sx126x_bus_mutex) xSemaphoreGive(sx126x_bus_mutex);
     return SX126X_HAL_STATUS_OK;
 }
 
@@ -156,9 +173,12 @@ sx126x_hal_status_t sx126x_hal_read( const void    *ctx,
                                      uint16_t       data_len )
 {
     (void)ctx;
+    if (sx126x_bus_mutex) xSemaphoreTake(sx126x_bus_mutex, portMAX_DELAY);
+
     // Wait for SX126x to be ready (BUSY pin goes low)
     if (!sx126x_wait_while_busy(DEFAULT_SPI_TIMEOUT_MS)) {
         ESP_LOGW(TAG, "BUSY timeout in sx126x_hal_read");
+        if (sx126x_bus_mutex) xSemaphoreGive(sx126x_bus_mutex);
         return SX126X_HAL_STATUS_ERROR;
     }
 
@@ -179,5 +199,6 @@ sx126x_hal_status_t sx126x_hal_read( const void    *ctx,
     ESP_ERROR_CHECK_WITHOUT_ABORT(spi_device_polling_transmit(sx126x_spi, &t_rd));
 
     gpio_set_level(SX126X_CS_PIN, 1);           /* ↑CS */
+    if (sx126x_bus_mutex) xSemaphoreGive(sx126x_bus_mutex);
     return SX126X_HAL_STATUS_OK;
 }

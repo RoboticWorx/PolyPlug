@@ -4,7 +4,10 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 
+#include <stdatomic.h>
+
 #include "esp_log.h"
+#include "esp_system.h"
 #include "espnow_task.h"
 
 #include "sx126x.h"
@@ -17,9 +20,26 @@ static const char *TAG = "LORA_TASK";
 static SemaphoreHandle_t xLoraEventSemaphore;
 static SemaphoreHandle_t xTXDoneSemaphore;
 
-static volatile bool rx_needs_rearm = false;
+// Re-arm request flag:
+// Only lora_task arms the radio and clears this flag; the handler and recovery paths only ever set it
+static atomic_bool rx_needs_rearm = false;
+
+// Handle of lora_task so the handler can wake it immediately for a re-arm
+static TaskHandle_t s_lora_task_handle = NULL;
+
+// Consecutive IRQ-recovery failures tolerated before rebooting to recover
+#define LORA_IRQ_RECOVERY_MAX_FAILS 20
 
 static void lora_event_handler_task(void *pvParameters);
+
+// Request lora_task to (re)arm RX. Single-writer entry point for the handler
+static void lora_request_rearm(void)
+{
+	atomic_store(&rx_needs_rearm, true);
+	if (s_lora_task_handle != NULL) {
+		xTaskNotifyGive(s_lora_task_handle);
+	}
+}
 
 static uint8_t enc_key_buf[LORA_PCP_ENC_KEY_LEN] = {0};
 
@@ -187,32 +207,80 @@ static void lora_task(void *pvParameters)
 	
 	lora_pcp_init(); // Load persisted replay counter
 
-	// Enter RX mode, retrying on failure since the radio is unusable without it
-	rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
+	int rearm_fails = 0;
+
+	// Enter RX mode now; the loop retries on failure
+	if (!lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH)) {
+		atomic_store(&rx_needs_rearm, true);
+	}
 
 	while (1) {
+		// Wake immediately on a re-arm request from the handler, otherwise every 50ms
+		ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(50));
+
 		// If new encryption key received (will always happen at least once on boot)
 		if (xQueueReceive(xEspReceivedEncKeyQueue, enc_key_buf, 0) == pdTRUE) {
 			lora_pcp_set_key(enc_key_buf);
 		}
 
-		// Retry entering RX mode if a previous attempt failed
-		if (rx_needs_rearm) {
-			rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
+		// lora_task is the sole owner of set_rx_mode and of clearing rx_needs_rearm
+		if (atomic_exchange(&rx_needs_rearm, false)) {
+			if (lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH)) {
+				rearm_fails = 0;
+			} else {
+				atomic_store(&rx_needs_rearm, true); // Keep the request pending
+				if (++rearm_fails >= LORA_IRQ_RECOVERY_MAX_FAILS) {
+					ESP_LOGE(TAG, "RX re-arm wedged %d times, restarting", rearm_fails);
+					esp_restart();
+				}
+			}
 		}
 
-		vTaskDelay(pdMS_TO_TICKS(50));
+		// DIO1 is edge-triggered, so a missed or latched IRQ can leave the line high
+		if (gpio_get_level(SX126X_DIO1_PIN)) { // Nudge the handler to read/clear the pending IRQ
+			xSemaphoreGive(xLoraEventSemaphore);
+		}
 	}
 }
 
 static void lora_event_handler_task(void *pvParameters)
 {
+	int irq_recovery_fails = 0;
+
 	while (1) {
 		// Wait for an event from the ISR
 		if (xSemaphoreTake(xLoraEventSemaphore, portMAX_DELAY) == pdTRUE) {
-			// Check IRQ flags
+			// Read IRQ flags
+			// A failed read leaves radio state unknown: clear
 			uint16_t irq_flags = 0;
-			sx126x_get_irq_status(NULL, &irq_flags);
+			if (sx126x_get_irq_status(NULL, &irq_flags) != SX126X_STATUS_OK) {
+				ESP_LOGE(TAG, "Failed to read IRQ status, recovering RX");
+				if (sx126x_clear_irq_status(NULL, SX126X_IRQ_ALL) == SX126X_STATUS_OK) {
+					// Latched IRQ released - have lora_task re-arm RX
+					irq_recovery_fails = 0;
+					lora_request_rearm();
+				} else if (++irq_recovery_fails >= LORA_IRQ_RECOVERY_MAX_FAILS) {
+					// SPI/BUSY bus is wedged - re-arming would fail too, so reboot to recover
+					ESP_LOGE(TAG, "IRQ recovery failed %d times, restarting", irq_recovery_fails);
+					esp_restart();
+				} else {
+					// Transient - retry the read/clear sequence shortly
+					vTaskDelay(pdMS_TO_TICKS(50));
+					xSemaphoreGive(xLoraEventSemaphore);
+				}
+				continue;
+			}
+			irq_recovery_fails = 0; // Healthy read - reset the failure counter
+
+			// Successfully read the radio's IRQ register, but found nothing pending
+			// Clear any stray latch but do not force a re-arm - the radio is still armed
+			if (irq_flags == 0) {
+				sx126x_clear_irq_status(NULL, SX126X_IRQ_ALL);
+				continue;
+			}
+
+			// Clear read flags up front so a co-latched flag can never be left set
+			sx126x_clear_irq_status(NULL, irq_flags);
 
 			// Check RX errors first - SX126X sets both CRC_ERROR and RX_DONE
 			// on a corrupted packet, so errors must take priority
@@ -220,26 +288,18 @@ static void lora_event_handler_task(void *pvParameters)
 				#ifdef POLYPLUG_DEBUG
 				ESP_LOGE(TAG, "Header error in received packet");
 				#endif
-				sx126x_clear_irq_status(NULL, SX126X_IRQ_HEADER_ERROR | SX126X_IRQ_RX_DONE);
-				rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
-			}
-			else if (irq_flags & SX126X_IRQ_CRC_ERROR) {
+				lora_request_rearm();
+			} else if (irq_flags & SX126X_IRQ_CRC_ERROR) {
 				#ifdef POLYPLUG_DEBUG
 				ESP_LOGE(TAG, "CRC error in received packet");
 				#endif
-				sx126x_clear_irq_status(NULL, SX126X_IRQ_CRC_ERROR | SX126X_IRQ_RX_DONE);
-				rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
-			}
-			// If transmission complete
-			else if (irq_flags & SX126X_IRQ_TX_DONE) {
+				lora_request_rearm();
+			} else if (irq_flags & SX126X_IRQ_TX_DONE) { // If transmission complete
 				#ifdef POLYPLUG_DEBUG
 				ESP_LOGI(TAG, "Transmission completed");
 				#endif
-				sx126x_clear_irq_status(NULL, SX126X_IRQ_TX_DONE);
-				rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
-			}
-			// RX complete (no CRC/header error)
-			else if (irq_flags & SX126X_IRQ_RX_DONE) {
+				lora_request_rearm();
+			} else if (irq_flags & SX126X_IRQ_RX_DONE) { // RX complete (no CRC/header error)
 				// Read the received packet
 
 				uint8_t rx_buffer[LORA_PCP_PAYLOAD_LENGTH];
@@ -258,8 +318,7 @@ static void lora_event_handler_task(void *pvParameters)
 					#ifdef POLYPLUG_DEBUG
 					ESP_LOGW(TAG, "Invalid RX size %d, discarding", rx_size);
 					#endif
-					sx126x_clear_irq_status(NULL, SX126X_IRQ_RX_DONE);
-					rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
+					lora_request_rearm();
 					continue;
 				}
 
@@ -287,21 +346,15 @@ static void lora_event_handler_task(void *pvParameters)
 				}
 				#endif
 
-				// Clear IRQ
-				sx126x_clear_irq_status(NULL, SX126X_IRQ_RX_DONE);
-
 				// Send ACK if valid; if no TX started, re-arm RX now
 				if (!lora_pcp_send_receipt()) {
-					rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
+					lora_request_rearm();
 				}
-			}
-
-			if (irq_flags & SX126X_IRQ_TIMEOUT) {
+			} else if (irq_flags & SX126X_IRQ_TIMEOUT) {
 				#ifdef POLYPLUG_DEBUG
 				ESP_LOGW(TAG, "RX timeout occurred");
 				#endif
-				sx126x_clear_irq_status(NULL, SX126X_IRQ_TIMEOUT);
-				rx_needs_rearm = !lora_radio_set_rx_mode(LORA_PCP_PAYLOAD_LENGTH);
+				lora_request_rearm();
 			}
 		}
 	}
@@ -311,7 +364,7 @@ static void lora_event_handler_task(void *pvParameters)
 void lora_task_create(void)
 {
 	// Create the LoRa task
-	if (xTaskCreate(lora_task, "lora_task", 1024 * 2, NULL, tskIDLE_PRIORITY + 1, NULL) != pdPASS) {
+	if (xTaskCreate(lora_task, "lora_task", 1024 * 2, NULL, tskIDLE_PRIORITY + 1, &s_lora_task_handle) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create lora_task");
 	}
 }

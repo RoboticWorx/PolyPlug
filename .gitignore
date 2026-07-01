@@ -1,4 +1,7 @@
 build/
 managed_components/
 dependencies.lock
+
 sdkconfig
+
+BUGS-fable.md
