@@ -127,17 +127,12 @@ static void plan_mode_task(void *arg) {
 	// Grab heap-allocated structure
 	relay_t *plan = arg;
 	
-	// Precompute masks and seconds
+	// Precompute masks and seconds (days are validated before spawn)
 	int days_mask = parse_weekdays(plan->plan_days);
 	int on_sec = parse_hhmmss(plan->plan_on);
 	int off_sec = parse_hhmmss(plan->plan_off);
-	
+
 	free(plan); // No longer needed
-	
-	if (days_mask == 0) {
-		ESP_LOGE(TAG, "Plan has no valid days; ignoring.");
-		vTaskDelete(NULL);
-	}
 
 	while (1) {
 		// Read current epoch again
@@ -234,6 +229,40 @@ static void plan_mode_task(void *arg) {
 	}
 }
 
+// Spawn one plan_mode_task and record it for persistence
+// Returns true on success
+static bool gpio_plan_spawn(const relay_t *p)
+{
+	if (plan_count >= MAX_PLANS) {
+		ESP_LOGE(TAG, "Plan queue full (%u/%u)", (unsigned)plan_count, MAX_PLANS);
+		return false;
+	}
+
+	// Reject a plan with no valid days before it consumes a slot
+	// Otherwise the spawned task would immediately self-delete, permanently leaking
+	if (parse_weekdays(p->plan_days) == 0) {
+		ESP_LOGE(TAG, "Plan has no valid days; ignoring.");
+		return false;
+	}
+
+	relay_t *plan = malloc(sizeof(*plan));
+	if (plan == NULL) {
+		ESP_LOGE(TAG, "malloc failed for plan_mode_task");
+		return false;
+	}
+	*plan = *p;
+
+	if (xTaskCreate(plan_mode_task, "plan_mode", 1024 * 2,
+				plan, tskIDLE_PRIORITY + 1, &plan_tasks[plan_count]) != pdPASS) {
+		free(plan);
+		ESP_LOGE(TAG, "Failed to create plan_mode_task");
+		return false;
+	}
+
+	plan_count++;
+	return true;
+}
+
 /* Main task */
 static void gpio_task(void *arg)
 {
@@ -243,8 +272,15 @@ static void gpio_task(void *arg)
 		ESP_LOGE(TAG, "Failed to create xRelayToggleQueue");
 	}
 	configASSERT(xRelayToggleQueue);
-	
-	while (1) 
+
+	// Restore the last commanded relay level after a reboot
+	bool saved_relay_on = false;
+	if (gpio_state_load_relay(&saved_relay_on)) {
+		gpio_relay_toggle(saved_relay_on);
+		relay_level = !saved_relay_on; // Next toggle command inverts current state
+	}
+
+	while (1)
 	{
 		// Toggle relay with button press
 		if (gpio_get_level(PAIR_BTN2_PIN) == 0) {
@@ -259,10 +295,12 @@ static void gpio_task(void *arg)
 		if (xQueueReceive(xRelayToggleQueue, &relay_rx, 0) == pdPASS) {
 			if (relay_rx.index == -2) { // Relay OFF
 				gpio_relay_toggle(false);
+
 				relay_level = true; // True to toggle from false if toggle cmd sent
 			}
 			else if (relay_rx.index == -1) { // Relay ON
 				gpio_relay_toggle(true);
+
 				relay_level = false; // False to toggle from true if toggle cmd sent
 			}
 			// LoRa command toggle
@@ -325,23 +363,9 @@ static void gpio_task(void *arg)
 				}
 			}
 			// LoRa Plan mode
-			else if (relay_rx.index == 2) {				
-				if (plan_count < MAX_PLANS) {
-					relay_t *plan = malloc(sizeof(*plan));
-					*plan = relay_rx;
-					if (xTaskCreate(plan_mode_task, "plan_mode", 1024 * 2,
-								plan, tskIDLE_PRIORITY + 1, &plan_tasks[plan_count]) != pdPASS) {
-						free(plan);
-						ESP_LOGE(TAG, "Failed to create plan_mode_task");
-					}
-					else {
-						plan_count++;
-					}
-				}
-				else {
-					ESP_LOGE(TAG, "Plan queue full (%u/%u)", plan_count, MAX_PLANS);
-				}
-				
+			else if (relay_rx.index == 2) {
+				gpio_plan_spawn(&relay_rx);
+
 				/*
 				NOT YET IMPLEMENTED: For reference reset all code:
 				for (size_t i = 0; i < plan_count; ++i) {
@@ -356,8 +380,8 @@ static void gpio_task(void *arg)
 			else if (relay_rx.index == 3) {
 				int min_m = relay_rx.away_min;
 				int max_m = relay_rx.away_max;
-				
-				while (1) {			
+
+				while (1) {
 					// Generate a random ON duration in range			
 					TickType_t delay_ticks = gpio_get_random_ticks_from_range(min_m, max_m);
 					

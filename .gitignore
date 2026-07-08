@@ -4,4 +4,4 @@ dependencies.lock
 
 sdkconfig
 
-BUGS-fable.md
+BUGS*.md

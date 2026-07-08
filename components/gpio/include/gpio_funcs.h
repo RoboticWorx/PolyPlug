@@ -109,4 +109,20 @@ void gpio_rgb_cycle_tick(uint32_t period_ms);
  */
 void gpio_pulse_5bit_bus(uint8_t value, uint32_t pulse_ms);
 
+/**
+ * @brief Persist the last commanded relay level.
+ *
+ * @param [in] on Relay level that was just commanded
+ */
+void gpio_state_save_relay(bool on);
+
+/**
+ * @brief Load the persisted relay level.
+ *
+ * @param [out] on Restored relay level (untouched if nothing is stored)
+ *
+ * @return true if a level was found in NVS, false otherwise
+ */
+bool gpio_state_load_relay(bool *on);
+
 #endif // GPIO_FUNCS_H

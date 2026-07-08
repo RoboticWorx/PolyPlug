@@ -5,6 +5,8 @@
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 
+#include "nvs.h"
+
 #include "esp_log.h"
 #include "esp_random.h"
 #include "esp_timer.h"
@@ -17,6 +19,9 @@
 
 #define ADC_CH ADC_CHANNEL_4
 #define NUM_ADC_SAMPLES 16384
+
+#define PLUG_STATE_NS  "plug_state" // NVS namespace
+#define PLUG_STATE_KEY "relay"      // Last commanded relay level (0 or 1)
 
 // SPI device handles
 spi_device_handle_t spi_sx126x; // For SX126x
@@ -195,8 +200,7 @@ void gpio_relay_toggle(bool on)
 		
 		// Red RGB ON
 		gpio_set_level(RGB_RED_PIN, 1);
-	}
-	else {
+	} else {
 		relay_on = false;
 	
 		// Relay OFF
@@ -205,6 +209,8 @@ void gpio_relay_toggle(bool on)
 		// Red RGB OFF
 		gpio_set_level(RGB_RED_PIN, 0);
 	}
+
+	gpio_state_save_relay(on); // Persist commanded state
 }
 
 void gpio_rgb_ready_to_rx(bool ready)
@@ -302,4 +308,50 @@ void gpio_pulse_5bit_bus(uint8_t value, uint32_t pulse_ms)
 
 	// Arm one-shot to clear after pulse_ms
 	ESP_ERROR_CHECK(esp_timer_start_once(gpio_out_pulse_timer, (uint64_t)pulse_ms * 1000ULL));
+}
+
+void gpio_state_save_relay(bool on)
+{
+	nvs_handle_t h;
+	esp_err_t err = nvs_open(PLUG_STATE_NS, NVS_READWRITE, &h);
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "Failed to open NVS for relay state: %s", esp_err_to_name(err));
+		return;
+	}
+
+	err = nvs_set_u8(h, PLUG_STATE_KEY, on ? 1 : 0);
+	if (err == ESP_OK) {
+		err = nvs_commit(h);
+	}
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "Failed to save relay state: %s", esp_err_to_name(err));
+	}
+
+	nvs_close(h);
+}
+
+bool gpio_state_load_relay(bool *on)
+{
+	if (on == NULL) {
+		ESP_LOGE(TAG, "gpio_state_load_relay: Invalid argument: on pointer is NULL");
+		return false; // Invalid argument
+	}
+
+	nvs_handle_t h;
+	esp_err_t err = nvs_open(PLUG_STATE_NS, NVS_READONLY, &h);
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "gpio_state_load_relay: Failed to open NVS: %s", esp_err_to_name(err));
+		return false; // Namespace absent = nothing saved yet
+	}
+
+	uint8_t v = 0;
+	err = nvs_get_u8(h, PLUG_STATE_KEY, &v);
+	nvs_close(h);
+
+	if (err != ESP_OK) {
+		return false;
+	}
+
+	*on = (v != 0);
+	return true;
 }
