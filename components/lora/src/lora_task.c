@@ -74,11 +74,14 @@ static void lora_task(void *pvParameters)
 		ESP_LOGE(TAG, "Failed to create lora_event_handler_task");
 	}
 
+	// Spreading factor synced from the remote (defaults to SF7 until the first pairing)
+	uint8_t lora_sf = lora_pcp_load_sf_nvs();
+
 	sx126x_mod_params_lora_t lora_mod_params = {
-		.sf = SX126X_LORA_SF7, // Spreading factor (higher value sends further but takes more time)
+		.sf = (sx126x_lora_sf_t)lora_sf, // Spreading factor (higher value sends further but takes more time)
 		.bw = SX126X_LORA_BW_125, // Bandwidth
 		.cr = SX126X_LORA_CR_4_5, // Error correction
-		.ldro = 0, // 1 if SF > 10
+		.ldro = (lora_sf > SX126X_LORA_SF10) ? 1 : 0, // 1 if SF > 10 (SF11/SF12 at BW125)
 	};
 
 	sx126x_pkt_params_lora_t lora_pkt_params = {
@@ -221,6 +224,29 @@ static void lora_task(void *pvParameters)
 		// If new encryption key received (will always happen at least once on boot)
 		if (xQueueReceive(xEspReceivedEncKeyQueue, enc_key_buf, 0) == pdTRUE) {
 			lora_pcp_set_key(enc_key_buf);
+
+			// A pairing may also have changed the spreading factor (saved to NVS by the ESP-NOW receive path)
+			// Re-apply it live so the plug's RX keeps matching the remote's TX without a reboot
+			uint8_t new_sf = lora_pcp_load_sf_nvs();
+			if (new_sf != lora_sf) {
+				// Only enter the write sequence if standby actually took
+				if (sx126x_set_standby(NULL, SX126X_STANDBY_CFG_RC) == SX126X_STATUS_OK) {
+					lora_mod_params.sf = (sx126x_lora_sf_t)new_sf;
+					lora_mod_params.ldro = (new_sf > SX126X_LORA_SF10) ? 1 : 0;
+
+					// Commit the new SF only once the write confirms
+					if (sx126x_set_lora_mod_params(NULL, &lora_mod_params) == SX126X_STATUS_OK) {
+						lora_sf = new_sf;
+					} else {
+						ESP_LOGE(TAG, "Failed to write new LoRa SF %u", new_sf);
+					}
+
+					// Re-arm regardless so we never get stuck in standby
+					atomic_store(&rx_needs_rearm, true);
+				} else {
+					ESP_LOGE(TAG, "Failed to enter standby for LoRa SF change");
+				}
+			}
 		}
 
 		// lora_task is the sole owner of set_rx_mode and of clearing rx_needs_rearm

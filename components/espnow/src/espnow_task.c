@@ -40,19 +40,25 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 	ESP_LOGI(TAG, "Received data of len: %d", data_len);
 	#endif
 
-	// If data is lora enc key
-	if (data_len == LORA_PCP_ENC_KEY_LEN) {
-		// Copy received bytes into your key array
-		memcpy(received_enc_key, data, LORA_PCP_ENC_KEY_LEN);
-	
+	// LoRa key sync frame: ESPNOW_MAGIC + 16-byte key + 1-byte spreading factor
+	if (data_len == (int)(ESPNOW_MAGIC_LEN + LORA_PCP_ENC_KEY_LEN + 1) &&
+	    	memcmp(data, ESPNOW_MAGIC, ESPNOW_MAGIC_LEN) == 0) {
+		const uint8_t *key = data + ESPNOW_MAGIC_LEN;
+
+		// Copy received key bytes into your key array
+		memcpy(received_enc_key, key, LORA_PCP_ENC_KEY_LEN);
+
+		// Persist the SF BEFORE queueing the key so lora_task reloads the matching SF on receipt
+		lora_pcp_save_sf_nvs(key[LORA_PCP_ENC_KEY_LEN]);
+
 		// Now print the stored key in hex
 		#ifdef POLYPLUG_DEBUG
 			ESP_LOG_BUFFER_HEX("RECEIVED ENC KEY", received_enc_key, LORA_PCP_ENC_KEY_LEN);
 		#endif
-		
+
 		// Save received key to flash
 		espnow_funcs_lora_key_nvs_save(received_enc_key);
-		
+
 		listen_triggered = true;
 
 #ifdef POLYPLUG_DEBUG

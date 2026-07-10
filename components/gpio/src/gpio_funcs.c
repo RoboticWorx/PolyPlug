@@ -340,7 +340,9 @@ bool gpio_state_load_relay(bool *on)
 	nvs_handle_t h;
 	esp_err_t err = nvs_open(PLUG_STATE_NS, NVS_READONLY, &h);
 	if (err != ESP_OK) {
-		ESP_LOGE(TAG, "gpio_state_load_relay: Failed to open NVS: %s", esp_err_to_name(err));
+		if (err != ESP_ERR_NVS_NOT_FOUND) {
+			ESP_LOGE(TAG, "gpio_state_load_relay: Failed to open NVS: %s", esp_err_to_name(err));
+		}
 		return false; // Namespace absent = nothing saved yet
 	}
 

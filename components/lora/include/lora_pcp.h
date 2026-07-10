@@ -26,12 +26,20 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "esp_err.h"
+
 #define LORA_PCP_NONCE_LENGTH  13
 #define LORA_PCP_MIC_LENGTH    4
 #define LORA_PCP_ENC_KEY_LEN   16
 #define LORA_PCP_INSTR_MAX_LEN 32
 #define LORA_PCP_COMMAND 0x01
 #define LORA_PCP_ACK     0x02
+
+// User-selectable LoRa spreading factor range (must match the PolyCast5 remote)
+// The numeric SF value equals the SX126X_LORA_SFx enum value (e.g. SF7 == 0x07)
+#define LORA_PCP_SF_MIN     7  // SX126X_LORA_SF7
+#define LORA_PCP_SF_MAX     12 // SX126X_LORA_SF12
+#define LORA_PCP_SF_DEFAULT 7  // SX126X_LORA_SF7 (matches the remote's default)
 
 // Command message (38 bytes plaintext, 38 bytes ciphertext - no padding with CCM)
 typedef struct __attribute__((packed)) {
@@ -62,6 +70,25 @@ typedef struct __attribute__((packed)) {
  * 		  for synchronizing access to replay counter and valid data marker.
  */
 void lora_pcp_init(void);
+
+/**
+ * @brief Load the persisted LoRa spreading factor from NVS
+ *
+ * @returns The stored SF as a plain numeric value (LORA_PCP_SF_MIN..LORA_PCP_SF_MAX).
+ *          Returns LORA_PCP_SF_DEFAULT when no value is stored or the stored value
+ *          is out of range, so callers always receive a radio-safe SF.
+ */
+uint8_t lora_pcp_load_sf_nvs(void);
+
+/**
+ * @brief Persist the LoRa spreading factor to NVS (received from the remote during sync)
+ *
+ * @param [in] sf Spreading factor as a plain numeric value; clamped to
+ *                LORA_PCP_SF_MIN..LORA_PCP_SF_MAX before it is stored.
+ *
+ * @returns ESP_OK on success, otherwise the failing NVS error code.
+ */
+esp_err_t lora_pcp_save_sf_nvs(uint8_t sf);
 
 /**
  * @brief Sets the encryption key for PCP and resets the replay counter

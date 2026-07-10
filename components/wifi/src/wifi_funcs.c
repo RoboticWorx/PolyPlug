@@ -886,9 +886,9 @@ void wifi_funcs_mac_nvs_load(void)
 	// Open NVS
 	esp_err_t err = nvs_open(MQTT_NS, NVS_READONLY, &handle);
 	if (err != ESP_OK) {
-		#ifdef POLYPLUG_DEBUG
-		ESP_LOGW(TAG, "mac_nvs_load: NVS open failed: %s", esp_err_to_name(err));
-		#endif
+		if (err != ESP_ERR_NVS_NOT_FOUND) {
+			ESP_LOGE(TAG, "mac_nvs_load: NVS open failed: %s", esp_err_to_name(err));
+		}
 		return;
 	}
 
