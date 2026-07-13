@@ -40,16 +40,25 @@ static void on_data_recv(const esp_now_recv_info_t *info, const uint8_t *data, i
 	ESP_LOGI(TAG, "Received data of len: %d", data_len);
 	#endif
 
-	// LoRa key sync frame: ESPNOW_MAGIC + 16-byte key + 1-byte spreading factor
-	if (data_len == (int)(ESPNOW_MAGIC_LEN + LORA_PCP_ENC_KEY_LEN + 1) &&
-	    	memcmp(data, ESPNOW_MAGIC, ESPNOW_MAGIC_LEN) == 0) {
+	// LoRa key sync frame: ESPNOW_MAGIC + 16-byte key + 1-byte SF + 1-byte region
+	// A frame bearing our magic is always a sync frame; a wrong length is rejected here
+	// so a malformed sync frame is never misread as MQTT network config below
+	if (data_len >= (int)ESPNOW_MAGIC_LEN && memcmp(data, ESPNOW_MAGIC, ESPNOW_MAGIC_LEN) == 0) {
+		if (data_len != (int)(ESPNOW_MAGIC_LEN + LORA_PCP_ENC_KEY_LEN + 2)) {
+			#ifdef POLYPLUG_DEBUG
+			ESP_LOGW(TAG, "Rejecting malformed sync frame of len %d", data_len);
+			#endif
+			return;
+		}
+
 		const uint8_t *key = data + ESPNOW_MAGIC_LEN;
 
 		// Copy received key bytes into your key array
 		memcpy(received_enc_key, key, LORA_PCP_ENC_KEY_LEN);
 
-		// Persist the SF BEFORE queueing the key so lora_task reloads the matching SF on receipt
+		// Persist the SF and region before queueing the key so lora_task reloads the matching radio config on receipt
 		lora_pcp_save_sf_nvs(key[LORA_PCP_ENC_KEY_LEN]);
+		lora_pcp_save_region_nvs((lora_region_t)key[LORA_PCP_ENC_KEY_LEN + 1]);
 
 		// Now print the stored key in hex
 		#ifdef POLYPLUG_DEBUG

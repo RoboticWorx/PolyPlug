@@ -34,8 +34,9 @@ static SemaphoreHandle_t xPcpMutex = NULL;
 #define PCP_NVS_NS    "pcp"
 #define PCP_NVS_RX_ID "last_msg_id"
 
-#define LORA_CFG_NVS_NS "lora_cfg" // Radio config kept separate from the replay counter
-#define LORA_CFG_NVS_SF "sf"       // Persisted spreading factor (received from the remote)
+#define LORA_CFG_NVS_NS     "lora_cfg" // Radio config kept separate from the replay counter
+#define LORA_CFG_NVS_SF     "sf"       // Persisted spreading factor (received from the remote)
+#define LORA_CFG_NVS_REGION "region"   // Persisted region / RF band (received from the remote)
 
 #define PCP_CCM_ALG PSA_ALG_AEAD_WITH_SHORTENED_TAG(PSA_ALG_CCM, LORA_PCP_MIC_LENGTH)
 
@@ -83,6 +84,54 @@ esp_err_t lora_pcp_save_sf_nvs(uint8_t sf)
 	}
 	if (err != ESP_OK) {
 		ESP_LOGE(TAG, "lora_pcp_save_sf_nvs: NVS write failed: %s", esp_err_to_name(err));
+	}
+
+	nvs_close(h);
+	return err;
+}
+
+lora_region_t lora_pcp_load_region_nvs(void)
+{
+	nvs_handle_t h;
+	lora_region_t region = LORA_REGION_DEFAULT; // Default matches the remote when nothing is stored yet
+
+	// Open read-only; a missing namespace/key or out-of-range value falls back to the default
+	if (nvs_open(LORA_CFG_NVS_NS, NVS_READONLY, &h) == ESP_OK) {
+		uint8_t stored;
+		if (nvs_get_u8(h, LORA_CFG_NVS_REGION, &stored) == ESP_OK &&
+		    stored < LORA_REGION_COUNT) {
+			region = (lora_region_t)stored;
+		}
+		nvs_close(h);
+	}
+
+#ifdef POLYPLUG_DEBUG
+	ESP_LOGI(TAG, "Loaded LoRa region=%s", region == LORA_REGION_EU ? "EU" : "US");
+#endif
+
+	return region;
+}
+
+esp_err_t lora_pcp_save_region_nvs(lora_region_t region)
+{
+	// Clamp to a valid region so a bad value can never reach the radio
+	if (region >= LORA_REGION_COUNT) {
+		region = LORA_REGION_DEFAULT;
+	}
+
+	nvs_handle_t h;
+	esp_err_t err = nvs_open(LORA_CFG_NVS_NS, NVS_READWRITE, &h);
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "lora_pcp_save_region_nvs: NVS open failed: %s", esp_err_to_name(err));
+		return err;
+	}
+
+	err = nvs_set_u8(h, LORA_CFG_NVS_REGION, (uint8_t)region);
+	if (err == ESP_OK) {
+		err = nvs_commit(h);
+	}
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "lora_pcp_save_region_nvs: NVS write failed: %s", esp_err_to_name(err));
 	}
 
 	nvs_close(h);

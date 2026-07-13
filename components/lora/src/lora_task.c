@@ -53,6 +53,39 @@ static void IRAM_ATTR dio1_isr_handler(void *arg)
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+// RF parameters per region: PCP carrier plus the SX1262 image-calibration band
+static const struct {
+	uint32_t freq_hz;    // PCP carrier frequency
+	uint16_t cal_lo_mhz; // Image-calibration band low edge (MHz)
+	uint16_t cal_hi_mhz; // Image-calibration band high edge (MHz)
+} lora_region_rf[LORA_REGION_COUNT] = {
+	[LORA_REGION_US] = { LORA_PCP_FREQ_US_HZ, 902, 928 }, // US 902-928 MHz
+	[LORA_REGION_EU] = { LORA_PCP_FREQ_EU_HZ, 863, 870 }, // EU 863-870 MHz
+};
+
+// Tune the carrier and calibrate the image for a region. The radio must already
+// be in standby. Logs each failed write and returns true only if both confirm.
+static bool lora_apply_region(lora_region_t region)
+{
+	if (region >= LORA_REGION_COUNT) {
+		region = LORA_REGION_DEFAULT;
+	}
+
+	sx126x_status_t fs = sx126x_set_rf_freq(NULL, lora_region_rf[region].freq_hz);
+	if (fs != SX126X_STATUS_OK) {
+		ESP_LOGE(TAG, "Failed to set frequency");
+	}
+
+	// Calibrate the image for the active band so image rejection matches the operating frequency
+	sx126x_status_t cs = sx126x_cal_img_in_mhz(NULL, lora_region_rf[region].cal_lo_mhz,
+			lora_region_rf[region].cal_hi_mhz);
+	if (cs != SX126X_STATUS_OK) {
+		ESP_LOGE(TAG, "Failed to calibrate image");
+	}
+
+	return fs == SX126X_STATUS_OK && cs == SX126X_STATUS_OK;
+}
+
 // LoRa Task
 static void lora_task(void *pvParameters)
 {
@@ -76,6 +109,9 @@ static void lora_task(void *pvParameters)
 
 	// Spreading factor synced from the remote (defaults to SF7 until the first pairing)
 	uint8_t lora_sf = lora_pcp_load_sf_nvs();
+
+	// Region / RF band synced from the remote (defaults to US 915 MHz until the first pairing)
+	lora_region_t lora_region = lora_pcp_load_region_nvs();
 
 	sx126x_mod_params_lora_t lora_mod_params = {
 		.sf = (sx126x_lora_sf_t)lora_sf, // Spreading factor (higher value sends further but takes more time)
@@ -134,15 +170,8 @@ static void lora_task(void *pvParameters)
 		ESP_LOGE(TAG, "Failed to set packet type");
 	}
 
-	status = sx126x_set_rf_freq(NULL, 915000000);
-	if (status != SX126X_STATUS_OK) {
-		ESP_LOGE(TAG, "Failed to set frequency");
-	}
-
-	status = sx126x_cal_img_in_mhz(NULL, 902, 928);
-    if (status != SX126X_STATUS_OK) {
-        ESP_LOGE(TAG, "Failed to calibrate image");
-    }
+	// Tune the carrier and calibrate the image for the synced region (US 915 MHz / EU 869.5 MHz)
+	lora_apply_region(lora_region);
 
 	status = sx126x_set_pa_cfg(NULL, &pa_config);
 	if (status != SX126X_STATUS_OK) {
@@ -225,26 +254,39 @@ static void lora_task(void *pvParameters)
 		if (xQueueReceive(xEspReceivedEncKeyQueue, enc_key_buf, 0) == pdTRUE) {
 			lora_pcp_set_key(enc_key_buf);
 
-			// A pairing may also have changed the spreading factor (saved to NVS by the ESP-NOW receive path)
-			// Re-apply it live so the plug's RX keeps matching the remote's TX without a reboot
+			// A pairing may also have changed the spreading factor and/or region
+			// Re-apply them live so the plug's RX keeps matching the remote's TX
 			uint8_t new_sf = lora_pcp_load_sf_nvs();
-			if (new_sf != lora_sf) {
+			lora_region_t new_region = lora_pcp_load_region_nvs();
+			if (new_sf != lora_sf || new_region != lora_region) {
 				// Only enter the write sequence if standby actually took
 				if (sx126x_set_standby(NULL, SX126X_STANDBY_CFG_RC) == SX126X_STATUS_OK) {
-					lora_mod_params.sf = (sx126x_lora_sf_t)new_sf;
-					lora_mod_params.ldro = (new_sf > SX126X_LORA_SF10) ? 1 : 0;
+					// Spreading factor
+					if (new_sf != lora_sf) {
+						lora_mod_params.sf = (sx126x_lora_sf_t)new_sf;
+						lora_mod_params.ldro = (new_sf > SX126X_LORA_SF10) ? 1 : 0;
 
-					// Commit the new SF only once the write confirms
-					if (sx126x_set_lora_mod_params(NULL, &lora_mod_params) == SX126X_STATUS_OK) {
-						lora_sf = new_sf;
-					} else {
-						ESP_LOGE(TAG, "Failed to write new LoRa SF %u", new_sf);
+						// Commit the new SF only once the write confirms
+						if (sx126x_set_lora_mod_params(NULL, &lora_mod_params) == SX126X_STATUS_OK) {
+							lora_sf = new_sf;
+						} else {
+							ESP_LOGE(TAG, "Failed to write new LoRa SF %u", new_sf);
+						}
+					}
+
+					// Region / RF band: retune the carrier and re-calibrate the image for the new band
+					if (new_region != lora_region) {
+						if (lora_apply_region(new_region)) {
+							lora_region = new_region;
+						} else {
+							ESP_LOGE(TAG, "Failed to retune to new LoRa region %d", (int)new_region);
+						}
 					}
 
 					// Re-arm regardless so we never get stuck in standby
 					atomic_store(&rx_needs_rearm, true);
 				} else {
-					ESP_LOGE(TAG, "Failed to enter standby for LoRa SF change");
+					ESP_LOGE(TAG, "Failed to enter standby for LoRa SF/region change");
 				}
 			}
 		}
