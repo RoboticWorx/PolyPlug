@@ -43,19 +43,39 @@
 
 // LoRa region: the RF band synced from the PolyCast5 remote
 // The PCP carrier and SX1262 image-calibration band both follow this
+// APPEND ONLY: the value arrives as a raw byte on the ESP-NOW key-sync frame,
+// so existing entries must never be renumbered (must match the remote's enum)
 typedef enum {
-	LORA_REGION_US = 0, // US 902-928 MHz ISM band
-	LORA_REGION_EU = 1, // EU 863-870 MHz ISM band (ETSI EN 300 220)
-	LORA_REGION_COUNT   // Not a region; count for range clamping
+	LORA_REGION_US  = 0,  // US 902-928 MHz ISM band
+	LORA_REGION_EU  = 1,  // EU 863-870 MHz ISM band (ETSI EN 300 220)
+	LORA_REGION_ANZ = 2,  // Australia/New Zealand 915-928 MHz
+	LORA_REGION_IN  = 3,  // India 865-867 MHz
+	LORA_REGION_KR  = 4,  // South Korea 920-923 MHz
+	LORA_REGION_JP  = 5,  // Japan 920.5-923.5 MHz (ARIB STD-T108)
+	LORA_REGION_TW  = 6,  // Taiwan 920-925 MHz
+	LORA_REGION_RU  = 7,  // Russia 868.7-869.2 MHz
+	LORA_REGION_TH  = 8,  // Thailand 920-925 MHz
+	LORA_REGION_SG  = 9,  // Singapore 917-925 MHz
+	LORA_REGION_MY  = 10, // Malaysia 919-924 MHz
+	LORA_REGION_COUNT     // Not a region; count for range clamping
 } lora_region_t;
 
 #define LORA_REGION_DEFAULT LORA_REGION_US // Preserves the original hardcoded 915 MHz behavior
 
-// PCP carrier frequency per region (must match the remote)
-#define LORA_PCP_FREQ_US_HZ 915000000UL // US 915 MHz band center
+// PCP carrier frequency per region: the band center (must match the remote)
+#define LORA_PCP_FREQ_US_HZ  915000000UL // US 915 MHz band center
 // EU: the 869.4-869.65 MHz high-power sub-band (ETSI allows 500 mW / 27 dBm, 10% duty), so PCP's 22 dBm TX stays legal
 // BW125 at 869.5 spans 869.4375-869.5625, inside the sub-band
-#define LORA_PCP_FREQ_EU_HZ 869500000UL
+#define LORA_PCP_FREQ_EU_HZ  869500000UL
+#define LORA_PCP_FREQ_ANZ_HZ 921500000UL // Australia/NZ 915-928 MHz center
+#define LORA_PCP_FREQ_IN_HZ  866000000UL // India 865-867 MHz center
+#define LORA_PCP_FREQ_KR_HZ  921500000UL // South Korea 920-923 MHz center
+#define LORA_PCP_FREQ_JP_HZ  922000000UL // Japan 920.5-923.5 MHz center
+#define LORA_PCP_FREQ_TW_HZ  922500000UL // Taiwan 920-925 MHz center
+#define LORA_PCP_FREQ_RU_HZ  868950000UL // Russia 868.7-869.2 MHz center
+#define LORA_PCP_FREQ_TH_HZ  922500000UL // Thailand 920-925 MHz center (same band as TW; identical value intentional)
+#define LORA_PCP_FREQ_SG_HZ  921000000UL // Singapore 917-925 MHz center
+#define LORA_PCP_FREQ_MY_HZ  921500000UL // Malaysia 919-924 MHz center
 
 // Command message (38 bytes plaintext, 38 bytes ciphertext - no padding with CCM)
 typedef struct __attribute__((packed)) {
@@ -109,7 +129,7 @@ esp_err_t lora_pcp_save_sf_nvs(uint8_t sf);
 /**
  * @brief Load the persisted LoRa region from NVS
  *
- * @returns The stored region (LORA_REGION_US or LORA_REGION_EU). Returns
+ * @returns The stored region (any valid lora_region_t). Returns
  *          LORA_REGION_DEFAULT when no value is stored or the stored value is
  *          out of range, so callers always receive a valid region.
  */

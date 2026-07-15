@@ -106,7 +106,11 @@ lora_region_t lora_pcp_load_region_nvs(void)
 	}
 
 #ifdef POLYPLUG_DEBUG
-	ESP_LOGI(TAG, "Loaded LoRa region=%s", region == LORA_REGION_EU ? "EU" : "US");
+	// Region names indexed by lora_region_t (region is already validated above)
+	static const char *region_name[LORA_REGION_COUNT] = {
+		"US", "EU", "ANZ", "IN", "KR", "JP", "TW", "RU", "TH", "SG", "MY",
+	};
+	ESP_LOGI(TAG, "Loaded LoRa region=%s", region_name[region]);
 #endif
 
 	return region;

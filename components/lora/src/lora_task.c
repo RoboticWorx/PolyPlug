@@ -59,8 +59,17 @@ static const struct {
 	uint16_t cal_lo_mhz; // Image-calibration band low edge (MHz)
 	uint16_t cal_hi_mhz; // Image-calibration band high edge (MHz)
 } lora_region_rf[LORA_REGION_COUNT] = {
-	[LORA_REGION_US] = { LORA_PCP_FREQ_US_HZ, 902, 928 }, // US 902-928 MHz
-	[LORA_REGION_EU] = { LORA_PCP_FREQ_EU_HZ, 863, 870 }, // EU 863-870 MHz
+	[LORA_REGION_US]  = { LORA_PCP_FREQ_US_HZ,  902, 928 }, // US 902-928 MHz
+	[LORA_REGION_EU]  = { LORA_PCP_FREQ_EU_HZ,  863, 870 }, // EU 863-870 MHz
+	[LORA_REGION_ANZ] = { LORA_PCP_FREQ_ANZ_HZ, 902, 928 }, // Australia/NZ 915-928 MHz
+	[LORA_REGION_IN]  = { LORA_PCP_FREQ_IN_HZ,  863, 870 }, // India 865-867 MHz
+	[LORA_REGION_KR]  = { LORA_PCP_FREQ_KR_HZ,  902, 928 }, // South Korea 920-923 MHz
+	[LORA_REGION_JP]  = { LORA_PCP_FREQ_JP_HZ,  902, 928 }, // Japan 920.5-923.5 MHz
+	[LORA_REGION_TW]  = { LORA_PCP_FREQ_TW_HZ,  902, 928 }, // Taiwan 920-925 MHz
+	[LORA_REGION_RU]  = { LORA_PCP_FREQ_RU_HZ,  863, 870 }, // Russia 868.7-869.2 MHz
+	[LORA_REGION_TH]  = { LORA_PCP_FREQ_TH_HZ,  902, 928 }, // Thailand 920-925 MHz
+	[LORA_REGION_SG]  = { LORA_PCP_FREQ_SG_HZ,  902, 928 }, // Singapore 917-925 MHz
+	[LORA_REGION_MY]  = { LORA_PCP_FREQ_MY_HZ,  902, 928 }, // Malaysia 919-924 MHz
 };
 
 // Tune the carrier and calibrate the image for a region. The radio must already
@@ -170,7 +179,7 @@ static void lora_task(void *pvParameters)
 		ESP_LOGE(TAG, "Failed to set packet type");
 	}
 
-	// Tune the carrier and calibrate the image for the synced region (US 915 MHz / EU 869.5 MHz)
+	// Tune the carrier and calibrate the image for the synced region (see lora_region_rf table)
 	lora_apply_region(lora_region);
 
 	status = sx126x_set_pa_cfg(NULL, &pa_config);
